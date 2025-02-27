@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <!-- <favicon href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon"> -->
+    <title>Средняя светимость</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/style.css') }}">
+</head>
+<body>
+
+    <div id="sidebar">
+        <button id="toggle-sidebar" onclick="toggleSidebar()">⮜</button>
+        <div id="hide-sidebar">
+            <!-- <button onclick="selectFolder()">Выбрать папку</button> -->
+            <div id="thumbnail-slider-container">
+                <input type="range" id="thumbnail-size" min="50" max="250" value="200" onchange="updateThumbnailSize()">
+            </div>
+            <!--<div id="thumbnails-container">-->
+                <!-- <button onclick="scrollThumbnails(-100)">↑</button> -->
+                <div id="thumbnails"></div>
+                <!-- <button onclick    ="scrollThumbnails(100)">↓</button> -->
+            <!--</div>-->
+        </div>
+    
+
+        <!-- <p id="luminance-output"></p> -->
+        
+    </div> 
+
+    <div id="main-side">
+        <!-- <div id="file-input-container">
+            <input type="file" id="file-input" accept="image/*" onchange="loadImage()">
+        </div> -->
+        <div id="image-container">
+            <div id="dropzone">
+                <!-- <img id="image" src="{{ url_for('static', filename='placeholder.png') }}"> -->
+                <p>Перетащите изображение</p>
+            </div>
+            <div id="canvas-container">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+        
+        <div id="input-output">
+            <div id="luminance-output">
+                <p>Таблица светимости</p>
+                <table id="luminance-table"></table>
+            </div>
+            <div id="control">
+                <button onclick="calculateLuminance()">Посчитать светимость</button> 
+                <button onclick="addVerticalLine()">Добавить вертикальную линию</button>
+                <button onclick="addHorizontalLine()">Добавить горизонтальную линию</button>
+                <button onclick="removeVerticalLine()">Удалить вертикальную линию</button>
+                <button onclick="removeHorizontalLine()">Удалить горизонтальную линию</button>
+
+            </div>  
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='scripts/canvas.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/load.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/process_image.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/sidebar.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/button_controller.js') }}"></script>
+</body>
+</html>

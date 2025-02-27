@@ -1,0 +1,130 @@
+body 
+{ 
+    font-family: Arial, sans-serif; /* Устанавливает шрифт Arial или, если он недоступен, любой шрифт без засечек */
+    display: flex; /* Устанавливает flex-контейнер для body */
+    align-items: stretch;
+}
+#sidebar.collapsed {
+    width: 50px; /* Ширина боковой панели в свернутом состоянии */
+}
+#sidebar 
+{ 
+    display: flex; /* Устанавливает flex-контейнер */
+    flex-direction: column; /* Устанавливает направление flex-элементов по вертикали */
+    width: 260; /* Устанавливает ширину боковой панели */
+    padding: 10px; /* Устанавливает внутренние отступы */
+    border-right: 1px solid #ccc; /* Устанавливает правую границу с цветом #ccc */
+    transition: width 0.3s; /* Анимация изменения ширины */
+    max-width: 270;
+}
+#thumbnails-container 
+{ 
+    display: flex; /* Устанавливает flex-контейнер */
+    flex-direction: column; /* Устанавливает направление flex-элементов по вертикали */
+    flex-grow: 1; /* Устанавливает, что контейнер может расти, занимая доступное пространство */
+    align-items: center; /* Выравнивает элементы по центру по горизонтали */
+    flex-grow: 1;
+}
+#image-container 
+{ 
+    display: flex; /* Устанавливает flex-контейнер */
+    flex-direction: column; /* Устанавливает направление flex-элементов по вертикали */
+    flex-grow: 1; /* Устанавливает, что контейнер может расти, занимая доступное пространство */
+    align-items: center; /* Выравнивает элементы по центру по горизонтали */
+    
+}
+#thumbnails 
+{ 
+    display: flex; /* Устанавливает flex-контейнер */
+    flex-direction: column; /* Устанавливает направление flex-элементов по вертикали */
+    overflow-y: scroll; /* Устанавливает прокрутку по вертикали, если содержимое превышает высоту контейнера */
+    flex-grow: 1;
+    max-height: 80vh; /* Устанавливает максимальную высоту контейнера */
+    justify-content: flex-start; /* Выравнивает элементы по центру по вертикали */
+    align-items: center; /* Выравнивает элементы по центру по горизонтали */
+    padding-top: 50px; /* Добавляет отступ сверху */
+    
+}
+#thumbnails img 
+{ 
+    cursor: pointer; /* Устанавливает курсор в виде указателя при наведении на изображение */
+    display: block; /* Устанавливает блочный элемент */
+    margin: 5px; /* Устанавливает внешние отступы */
+    justify-content: center; /* Выравнивает элементы по центру по вертикали */
+}
+div.thumbnail:hover
+{ 
+    border: 1px solid blue; /* Устанавливает границу с цветом черный */
+    background-color: aqua; /* Устанавливает цвет фона */
+}
+div.thumbnail.selected {
+    border: 2px solid rgb(0, 21, 255); /* Устанавливает границу для выбранного изображения */
+    background-color: rgba(8, 0, 255, 0.397); /* Устанавливает цвет фона для выбранного изображения */
+}
+#canvas-container 
+{ 
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    text-align: center;
+    align-items: center;
+    flex-grow: 1; /* Устанавливает, что контейнер может расти, занимая доступное пространство */
+    text-align: center; /* Выравнивает текст по центру */
+    position: relative; /* Устанавливает относительное позиционирование */
+}
+#main-side 
+{ 
+    flex-grow: 1; /* Устанавливает, что контейнер может расти, занимая доступное пространство */
+    display: flex; /* Устанавливает flex-контейнер */
+    flex-direction: column; /* Устанавливает направление flex-элементов по вертикали */
+}
+canvas 
+{ 
+    border: 1px solid black; /* Устанавливает границу с цветом черный */
+}
+button 
+{ 
+    margin: 5px; /* Устанавливает внешние отступы */
+}
+table 
+{ 
+    width: 100%; /* Устанавливает ширину таблицы на 100% */
+    border-collapse: collapse; /* Устанавливает схлопывание границ */
+    margin-top: 10px; /* Устанавливает верхний внешний отступ */
+}
+th, td 
+{ 
+    border: 1px solid black; /* Устанавливает границу с цветом черный */
+    padding: 5px; /* Устанавливает внутренние отступы */
+    text-align: center; /* Выравнивает текст по центру */
+}
+
+#image-container
+{ 
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    /* flex-grow: 1; */
+}
+#dropzone
+{ 
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    text-align: center;
+    align-items: center;
+    color: rgb(102, 102, 241);
+    border: 1px dashed rgb(102, 102, 241);
+}
+#canvas-container
+{ 
+    flex: 1.25;
+}
+
+.selected {
+    background-color: rgba(0, 128, 0, 0.748); /* Выберите нужный цвет или стиль */
+}
+
+
+
+
