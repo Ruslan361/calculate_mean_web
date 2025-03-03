@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <meta charset="UTF-8">
     <!-- <favicon href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon"> -->
     <title>Средняя светимость</title>
@@ -52,7 +54,7 @@
                 <button onclick="addHorizontalLine()">Добавить горизонтальную линию</button>
                 <button onclick="removeVerticalLine()">Удалить вертикальную линию</button>
                 <button onclick="removeHorizontalLine()">Удалить горизонтальную линию</button>
-
+                <button id="save-button">Сохранить изображение</button>
             </div>  
         </div>
     </div>
@@ -61,5 +63,7 @@
     <script src="{{ url_for('static', filename='scripts/process_image.js') }}"></script>
     <script src="{{ url_for('static', filename='scripts/sidebar.js') }}"></script>
     <script src="{{ url_for('static', filename='scripts/button_controller.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/save_image.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/.js') }}"></script>
 </body>
 </html>
