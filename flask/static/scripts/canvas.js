@@ -53,6 +53,8 @@ let canvasContainer = {
         // ctx.drawImage(this.img, 0, 0, canvas.width, canvas.height);
         // this.drawGrid();
         this.img.onload = () => {
+            canvas.width = canvasContainer.img.width * canvasContainer.scaleFactor;
+            canvas.height = canvasContainer.img.height * canvasContainer.scaleFactor;
             ctx.drawImage(this.img, 0, 0, canvas.width, canvas.height);
             
             let N = 3;

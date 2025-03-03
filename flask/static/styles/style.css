@@ -125,6 +125,25 @@ th, td
     background-color: rgba(0, 128, 0, 0.748); /* Выберите нужный цвет или стиль */
 }
 
-
+#input-output
+{
+    display: flex;
+    flex-direction: row;
+    align-items: center;    
+    justify-content: center;
+    padding: 10px;
+}
+#control
+{
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    font-size: 15;
+}
+#control button
+{
+    display: flex;
+    margin: 5px;
+}
 
 
