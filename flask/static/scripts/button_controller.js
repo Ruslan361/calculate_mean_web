@@ -40,11 +40,63 @@ function meanSelectedCells() {
 data = null;
 function calculateLuminance() 
 {
-    calculateLuminanceRemoute(canvasContainer.image.blurredImage, canvasContainer.image.verticalLines, canvasContainer.image.horizontalLines).then(result => {
-        // luminanceOutput.textContent = "Средняя светимость: " + JSON.stringify(result);
+    // Сохраняем выбранные ячейки перед пересчетом светимости
+    if (canvasContainer.image && typeof canvasContainer.image.updateSelectedCells === 'function') {
+        canvasContainer.image.updateSelectedCells();
+    }
+    
+    // Сохраняем размеры текущей таблицы для проверки
+    let oldTableSize = {
+        rows: 0,
+        cols: 0
+    };
+    
+    const table = document.getElementById('luminance-table');
+    if (table && table.rows.length > 0) {
+        oldTableSize.rows = table.rows.length - 1; // Минус заголовок
+        oldTableSize.cols = table.rows[0].cells.length - 2; // Минус первый столбец и столбец "Среднее"
+    }
+    
+    calculateLuminanceRemoute(canvasContainer.image.sourceImg, canvasContainer.image.verticalLines, canvasContainer.image.horizontalLines).then(result => {
+        // Сохраняем данные светимости в объекте изображения для будущего использования
+        canvasContainer.image.luminanceData = result.luminance;
+        
         data = result;
         updateLuminanceTable(result);
+        
+        // Восстанавливаем выбранные ячейки после обновления таблицы
+        restoreSelectedCells();
     });
+}
+
+function restoreSelectedCells() {
+    if (canvasContainer.image && canvasContainer.image.selectedCells) {
+        setTimeout(() => {
+            const table = document.getElementById('luminance-table');
+            
+            // Фильтруем выбранные ячейки, проверяя попадают ли они в размеры новой таблицы
+            const validCells = canvasContainer.image.selectedCells.filter(cell => {
+                // Проверка, что индексы строки и столбца не выходят за пределы таблицы
+                // +1 для учета заголовка таблицы
+                return table.rows.length > cell.row + 1 && 
+                       table.rows[cell.row + 1] && 
+                       table.rows[cell.row + 1].cells.length > cell.col + 1;
+            });
+            
+            // Обновляем массив выбранных ячеек, сохраняя только валидные
+            canvasContainer.image.selectedCells = validCells;
+            
+            // Применяем класс 'selected' к валидным ячейкам
+            validCells.forEach(cell => {
+                if (table.rows[cell.row + 1] && table.rows[cell.row + 1].cells[cell.col + 1]) {
+                    table.rows[cell.row + 1].cells[cell.col + 1].classList.add('selected');
+                }
+            });
+            
+            // Обновляем средние значения
+            meanSelectedCells();
+        }, 100); // Небольшая задержка для уверенности, что таблица создана
+    }
 }
 
 function addVerticalLine() {

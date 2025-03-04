@@ -38,8 +38,46 @@ class ImageProcessorWithCanvasInfo extends ImageProcessor {
         this.img = new Image();
         this.verticalLines = options.verticalLines;
         this.horizontalLines = options.horizontalLines;
-        this.selectedCells = options.selectedCells || []; // Store selected table cells
-        this.luminanceData = options.luminanceData || null; // Store luminance calculation results
+        this.selectedCells = options.selectedCells || []; // Сохраняем выбранные ячейки
+        this.luminanceData = options.luminanceData || null;
+    }
+    
+    // Метод для сохранения текущих выбранных ячеек
+    updateSelectedCells() {
+        this.selectedCells = [];
+        const table = document.getElementById('luminance-table');
+        
+        if (!table) return;
+        
+        // Safer iteration with additional checks
+        for (let i = 1; i < table.rows.length; i++) {
+            // Check if the row exists
+            if (!table.rows[i]) continue;
+            
+            for (let j = 1; j < table.rows[i].cells.length - 1; j++) {
+                // Check if the cell exists
+                if (!table.rows[i].cells[j]) continue;
+                
+                if (table.rows[i].cells[j].classList.contains('selected')) {
+                    this.selectedCells.push({row: i-1, col: j-1});
+                }
+            }
+        }
+        
+        // Additional check before setting tableSize
+        if (table.rows.length > 0 && table.rows[0] && table.rows[0].cells) {
+            // Сохраняем текущие размеры таблицы для будущей проверки
+            this.tableSize = {
+                rows: table.rows.length - 1,  // Минус заголовок
+                cols: table.rows[0].cells.length - 2  // Минус первый столбец и столбец "Среднее"
+            };
+        } else {
+            // Default values if table structure is incomplete
+            this.tableSize = {
+                rows: 0,
+                cols: 0
+            };
+        }
     }
 
     static async create(options) {

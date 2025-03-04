@@ -37,9 +37,35 @@ function refreshThumbnails(images)
                 
                 // Добавляем класс 'selected' к текущему изображению
                 thumbnail.classList.add('selected');
-                console.log(images[i]);
+                
+                // Сохраняем выбранные ячейки текущего изображения перед сменой
+                if (canvasContainer.image && typeof canvasContainer.image.updateSelectedCells === 'function') {
+                    canvasContainer.image.updateSelectedCells();
+                }
+                
+                // Добавляем очистку выделения в таблице перед загрузкой нового изображения
+                const table = document.getElementById('luminance-table');
+                if (table) {
+                    for (let i = 1; i < table.rows.length; i++) {
+                        for (let j = 1; j < table.rows[i].cells.length - 1; j++) {
+                            table.rows[i].cells[j].classList.remove('selected');
+                        }
+                    }
+                }
+                
+                // Загружаем новое изображение
                 canvasContainer.insert(images[i]);
                 setImage(images[i].sourceImg);
+                
+                // Если у нового изображения есть данные светимости, обновляем таблицу и восстанавливаем ячейки
+                if (images[i].luminanceData) {
+                    data = {
+                        luminance: images[i].luminanceData,
+                        grid: [images[i].horizontalLines, images[i].verticalLines]
+                    };
+                    updateLuminanceTable(data);
+                    restoreSelectedCells();
+                }
             };
             thumbnail.appendChild(imgElem);
             const p = document.createElement("p");

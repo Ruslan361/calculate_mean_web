@@ -56,15 +56,31 @@ let canvasContainer = {
         this.drawGrid();
     },
     insert: function(image) {
+        // Сохраняем выбранные ячейки текущего изображения перед сменой
+        if (this.image && typeof this.image.updateSelectedCells === 'function') {
+            this.image.updateSelectedCells();
+        }
+        
         this.image = image;
         
-        // Создаем размытое изображение один раз
+        // Создаем размытое изображение
         this.blurredImg = new Image();
         this.blurredImg.onload = () => {
             canvas.width = this.blurredImg.width * this.scaleFactor;
             canvas.height = this.blurredImg.height * this.scaleFactor;
             this.drawGrid();
-            calculateLuminance();
+            
+            // Если у изображения есть данные светимости и выбранные ячейки
+            if (image.luminanceData) {
+                data = {
+                    luminance: image.luminanceData,
+                    grid: [image.horizontalLines, image.verticalLines]
+                };
+                updateLuminanceTable(data);
+                restoreSelectedCells();
+            } else {
+                calculateLuminance(); // Вычисляем светимость с нуля
+            }
         };
         this.blurredImg.src = image.blurredImage;
     }
