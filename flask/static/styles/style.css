@@ -1,149 +1,168 @@
-body 
-{ 
-    font-family: Arial, sans-serif; /* Устанавливает шрифт Arial или, если он недоступен, любой шрифт без засечек */
-    display: flex; /* Устанавливает flex-контейнер для body */
+body {
+    font-family: 'Roboto', sans-serif;
+    display: flex;
     align-items: stretch;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 0;
 }
+
+#sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 260px;
+    padding: 10px;
+    border-right: 1px solid #ccc;
+    transition: width 0.3s;
+    background-color: #ffffff;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
 #sidebar.collapsed {
-    width: 50px; /* Ширина боковой панели в свернутом состоянии */
-}
-#sidebar 
-{ 
-    display: flex; /* Устанавливает flex-контейнер */
-    flex-direction: column; /* Устанавливает направление flex-элементов по вертикали */
-    width: 260; /* Устанавливает ширину боковой панели */
-    padding: 10px; /* Устанавливает внутренние отступы */
-    border-right: 1px solid #ccc; /* Устанавливает правую границу с цветом #ccc */
-    transition: width 0.3s; /* Анимация изменения ширины */
-    max-width: 270;
-}
-#thumbnails-container 
-{ 
-    display: flex; /* Устанавливает flex-контейнер */
-    flex-direction: column; /* Устанавливает направление flex-элементов по вертикали */
-    flex-grow: 1; /* Устанавливает, что контейнер может расти, занимая доступное пространство */
-    align-items: center; /* Выравнивает элементы по центру по горизонтали */
-    flex-grow: 1;
-}
-#image-container 
-{ 
-    display: flex; /* Устанавливает flex-контейнер */
-    flex-direction: column; /* Устанавливает направление flex-элементов по вертикали */
-    flex-grow: 1; /* Устанавливает, что контейнер может расти, занимая доступное пространство */
-    align-items: center; /* Выравнивает элементы по центру по горизонтали */
-    
-}
-#thumbnails 
-{ 
-    display: flex; /* Устанавливает flex-контейнер */
-    flex-direction: column; /* Устанавливает направление flex-элементов по вертикали */
-    overflow-y: scroll; /* Устанавливает прокрутку по вертикали, если содержимое превышает высоту контейнера */
-    flex-grow: 1;
-    max-height: 80vh; /* Устанавливает максимальную высоту контейнера */
-    justify-content: flex-start; /* Выравнивает элементы по центру по вертикали */
-    align-items: center; /* Выравнивает элементы по центру по горизонтали */
-    padding-top: 50px; /* Добавляет отступ сверху */
-    
-}
-#thumbnails img 
-{ 
-    cursor: pointer; /* Устанавливает курсор в виде указателя при наведении на изображение */
-    display: block; /* Устанавливает блочный элемент */
-    margin: 5px; /* Устанавливает внешние отступы */
-    justify-content: center; /* Выравнивает элементы по центру по вертикали */
-}
-div.thumbnail:hover
-{ 
-    border: 1px solid blue; /* Устанавливает границу с цветом черный */
-    background-color: aqua; /* Устанавливает цвет фона */
-}
-div.thumbnail.selected {
-    border: 2px solid rgb(0, 21, 255); /* Устанавливает границу для выбранного изображения */
-    background-color: rgba(8, 0, 255, 0.397); /* Устанавливает цвет фона для выбранного изображения */
-}
-#canvas-container 
-{ 
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    text-align: center;
-    align-items: center;
-    flex-grow: 1; /* Устанавливает, что контейнер может расти, занимая доступное пространство */
-    text-align: center; /* Выравнивает текст по центру */
-    position: relative; /* Устанавливает относительное позиционирование */
-}
-#main-side 
-{ 
-    flex-grow: 1; /* Устанавливает, что контейнер может расти, занимая доступное пространство */
-    display: flex; /* Устанавливает flex-контейнер */
-    flex-direction: column; /* Устанавливает направление flex-элементов по вертикали */
-}
-canvas 
-{ 
-    border: 1px solid black; /* Устанавливает границу с цветом черный */
-}
-button 
-{ 
-    margin: 5px; /* Устанавливает внешние отступы */
-}
-table 
-{ 
-    width: 100%; /* Устанавливает ширину таблицы на 100% */
-    border-collapse: collapse; /* Устанавливает схлопывание границ */
-    margin-top: 10px; /* Устанавливает верхний внешний отступ */
-}
-th, td 
-{ 
-    border: 1px solid black; /* Устанавливает границу с цветом черный */
-    padding: 5px; /* Устанавливает внутренние отступы */
-    text-align: center; /* Выравнивает текст по центру */
+    width: 50px;
 }
 
-#image-container
-{ 
+#toggle-sidebar {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+#thumbnail-slider-container {
+    margin-bottom: 20px;
+}
+
+#thumbnail-size {
+    width: 100%;
+}
+
+#thumbnails {
+    display: flex;
+    flex-direction: column;
+    overflow-y: scroll;
+    flex-grow: 1;
+    max-height: 80vh;
+    align-items: center;
+    padding-top: 10px;
+}
+
+#thumbnails img {
+    cursor: pointer;
+    display: block;
+    margin: 5px;
+    border-radius: 5px;
+    transition: transform 0.2s;
+}
+
+#thumbnails img:hover {
+    transform: scale(1.05);
+}
+
+div.thumbnail:hover {
+    border: 1px solid #007bff;
+    background-color: #e9f5ff;
+}
+
+div.thumbnail.selected {
+    border: 2px solid #007bff;
+    background-color: #e9f5ff;
+}
+
+#main-side {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+#image-container {
     display: flex;
     flex-direction: row;
     align-items: stretch;
-    /* flex-grow: 1; */
+    margin-bottom: 20px;
 }
-#dropzone
-{ 
+
+#dropzone {
     flex: 1;
     display: flex;
     justify-content: center;
-    text-align: center;
     align-items: center;
-    color: rgb(102, 102, 241);
-    border: 1px dashed rgb(102, 102, 241);
+    color: #6666f1;
+    border: 1px dashed #6666f1;
+    border-radius: 5px;
+    padding: 20px;
+    background-color: #f9f9ff;
 }
-#canvas-container
-{ 
+
+#canvas-container {
     flex: 1.25;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
 }
 
-.selected {
-    background-color: rgba(0, 128, 0, 0.748); /* Выберите нужный цвет или стиль */
+canvas {
+    border: 1px solid #ccc;
+    border-radius: 5px;
 }
 
-#input-output
-{
+#input-output {
     display: flex;
     flex-direction: row;
-    align-items: center;    
+    align-items: center;
     justify-content: center;
     padding: 10px;
+    background-color: #ffffff;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
-#control
-{
+
+#luminance-output {
+    flex: 1;
+    padding: 10px;
+}
+
+#control {
     display: flex;
     flex-direction: column;
     padding: 10px;
-    font-size: 15;
+    font-size: 15px;
 }
-#control button
-{
-    display: flex;
+
+#control button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px;
     margin: 5px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+
+#control button:hover {
+    background-color: #0056b3;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+th, td {
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: center;
+}
+
+.selected {
+    background-color: rgba(0, 128, 0, 0.748);
 }
 
 

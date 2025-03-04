@@ -37,7 +37,8 @@ function refreshThumbnails(images)
                 
                 // Добавляем класс 'selected' к текущему изображению
                 thumbnail.classList.add('selected');
-                canvasContainer.insert(images[i].blurImg);
+                console.log(images[i]);
+                canvasContainer.insert(images[i]);
                 setImage(images[i].sourceImg);
             };
             thumbnail.appendChild(imgElem);
