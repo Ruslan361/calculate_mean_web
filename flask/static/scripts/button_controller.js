@@ -40,7 +40,7 @@ function meanSelectedCells() {
 data = null;
 function calculateLuminance() 
 {
-    calculateLuminanceRemoute(canvasContainer.image.blurredImage, canvasContainer.image.verticalLines, canvasContainer.image.horizontalLines).then(result => {
+    calculateLuminanceRemoute(canvasContainer.image.sourceImg, canvasContainer.image.verticalLines, canvasContainer.image.horizontalLines).then(result => {
         // luminanceOutput.textContent = "Средняя светимость: " + JSON.stringify(result);
         data = result;
         updateLuminanceTable(result);
