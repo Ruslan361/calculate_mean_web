@@ -79,7 +79,7 @@ class TableView {
     }
     
     calculateMeanOfSelectedCells() {
-        for (let i = 1; i < this.table.rows.length; i++) {
+        for (let i = 1; i < this.table.rows.length - 1; i++) { // Skip the last row (overall average)
             let sum = 0;
             let count = 0;
             
@@ -96,6 +96,9 @@ class TableView {
             const mean = count > 0 ? (sum / count).toFixed(3) : "NaN";
             this.table.rows[i].cells[this.currentData.luminance[0].length + 1].textContent = mean;
         }
+        
+        // Update the overall average in the last row
+        this.updateOverallAverageRow();
     }
     
     getSelectedCells() {
@@ -144,5 +147,108 @@ class TableView {
         
         // Update means
         this.calculateMeanOfSelectedCells();
+    }
+    
+    // Add this method to the TableView class
+    calculateOverallAverage() {
+        let sum = 0;
+        let count = 0;
+        
+        // Start from row 1 (skip header) and iterate through all data rows
+        for (let i = 1; i < this.table.rows.length; i++) {
+            // Get the mean cell (last cell in each row)
+            const meanCell = this.table.rows[i].cells[this.table.rows[i].cells.length - 1];
+            const meanValue = meanCell.textContent;
+            
+            // Only include numeric values (ignore "NaN")
+            if (meanValue !== "NaN") {
+                sum += parseFloat(meanValue);
+                count++;
+            }
+        }
+        
+        // Return the calculated average or "NaN" if no valid values
+        return count > 0 ? (sum / count).toFixed(3) : "NaN";
+    }
+
+    // Add this method to update or create the overall average row
+    updateOverallAverageRow() {
+        const overallAverage = this.calculateOverallAverage();
+        
+        // Check if the bottom row already exists
+        let bottomRow;
+        if (this.table.rows.length > 0 && this.table.rows[this.table.rows.length - 1].classList.contains('overall-average')) {
+            bottomRow = this.table.rows[this.table.rows.length - 1];
+        } else {
+            // Create new row if it doesn't exist
+            bottomRow = this.table.insertRow();
+            bottomRow.classList.add('overall-average');
+            
+            // Create label cell
+            const labelCell = bottomRow.insertCell(0);
+            labelCell.textContent = "Общее среднее";
+            labelCell.style.fontWeight = "bold";
+            
+            // Add empty cells for data columns
+            const colCount = this.currentData?.luminance[0]?.length || 0;
+            for (let j = 0; j < colCount; j++) {
+                bottomRow.insertCell(j + 1).textContent = "";
+            }
+            
+            // Add cell for overall average
+            bottomRow.insertCell(colCount + 1);
+        }
+        
+        // Set the overall average value
+        bottomRow.cells[bottomRow.cells.length - 1].textContent = overallAverage;
+        bottomRow.cells[bottomRow.cells.length - 1].style.fontWeight = "bold";
+    }
+
+    // Add this method to TableView class
+    exportToExcel() {
+        // Check if table has data
+        if (!this.currentData || !this.table.rows.length) {
+            alert("Нет данных для экспорта");
+            return;
+        }
+        
+        // Create worksheet data array
+        const wsData = [];
+        
+        // Add all rows from table to worksheet data
+        for (let i = 0; i < this.table.rows.length; i++) {
+            const rowData = [];
+            const row = this.table.rows[i];
+            
+            for (let j = 0; j < row.cells.length; j++) {
+                // For numeric cells, convert to numbers
+                const cellContent = row.cells[j].textContent;
+                if (i > 0 && j > 0 && cellContent !== "NaN" && !isNaN(parseFloat(cellContent))) {
+                    rowData.push(parseFloat(cellContent));
+                } else {
+                    rowData.push(cellContent);
+                }
+            }
+            
+            wsData.push(rowData);
+        }
+        
+        // Create workbook and worksheet
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        
+        // Set column widths
+        const colWidths = [];
+        for (let i = 0; i < (wsData[0]?.length || 0); i++) {
+            colWidths.push({ wch: 15 }); // Set width to 15 characters
+        }
+        ws['!cols'] = colWidths;
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, "Luminance Data");
+        
+        // Generate Excel file and trigger download
+        const fileName = "luminance_data_" + new Date().toISOString().split('T')[0] + ".xlsx";
+        XLSX.writeFile(wb, fileName);
     }
 }

@@ -95,6 +95,11 @@ class App {
                 });
             }
         });
+
+        // Add event listener for Excel export
+        document.getElementById('export-excel').addEventListener('click', () => {
+            this.tableView.exportToExcel();
+        });
     }
     
     setupDropZone(dropzone) {
