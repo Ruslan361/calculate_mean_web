@@ -237,6 +237,7 @@ class App {
     }
 }
 
+
 // Initialize the application when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new App();
