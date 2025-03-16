@@ -100,6 +100,57 @@ class App {
         document.getElementById('export-excel').addEventListener('click', () => {
             this.tableView.exportToExcel();
         });
+
+        // Обработчик события для контроля значения alpha
+        document.getElementById('alpha-value').addEventListener('input', (e) => {
+            document.getElementById('alpha-display').textContent = e.target.value;
+        });
+
+        // Обработчик события для кнопки расчета адаптивной сетки
+        document.getElementById('calculate-grid').addEventListener('click', () => {
+            const currentImage = this.canvasView.getCurrentImage();
+            if (!currentImage) {
+                alert('Сначала загрузите изображение');
+                return;
+            }
+            
+            const numVertical = parseInt(document.getElementById('num-vertical').value);
+            const numHorizontal = parseInt(document.getElementById('num-horizontal').value);
+            const alpha = parseFloat(document.getElementById('alpha-value').value);
+            const threshold = parseInt(document.getElementById('threshold-value').value);
+            
+            // Вызываем новый эндпоинт
+            fetch('/adaptive-grid', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    image: currentImage.sourceImg,
+                    num_vertical: numVertical,
+                    num_horizontal: numHorizontal,
+                    alpha: alpha,
+                    threshold: threshold
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Обновляем линии на текущем изображении
+                currentImage.verticalLines = data.vertical_lines;
+                currentImage.horizontalLines = data.horizontal_lines;
+                
+                // Перерисовываем canvas
+                this.canvasView.redraw();
+                
+                // Автоматически вычисляем светимость и выделяем максимальные ячейки
+                this.calculateLuminance(true);
+                
+            })
+            .catch(error => {
+                console.error('Ошибка при расчете адаптивной сетки:', error);
+                alert('Ошибка при расчете адаптивной сетки');
+            });
+        });
     }
     
     setupDropZone(dropzone) {
@@ -151,27 +202,37 @@ class App {
         });
     }
     
-    calculateLuminance() {
+    calculateLuminance(highlightMaxCells = false) {
         const image = this.canvasView.getCurrentImage();
         
-        if (!image) return;
+        if (!image) return Promise.resolve();
         
-        // Save current selected cells
-        image.updateSelectedCells(this.tableView.getSelectedCells());
+        // Сохраняем текущие выбранные ячейки, только если мы не будем выделять максимальные
+        if (!highlightMaxCells) {
+            image.updateSelectedCells(this.tableView.getSelectedCells());
+        }
         
-        this.apiService.calculateLuminance(
+        return this.apiService.calculateLuminance(
             image.sourceImg, 
             image.verticalLines, 
             image.horizontalLines
         ).then(result => {
-            // Save luminance data to image
+            // Сохраняем данные о светимости в изображение
             image.luminanceData = result.luminance;
             
-            // Update the table
+            // Обновляем таблицу
             this.tableView.updateTable(result);
             
-            // Restore selected cells
+            if (highlightMaxCells) {
+                // Находим максимальные ячейки и выделяем их
+                const maxCells = this.tableView.findMaxValueCells();
+                image.selectedCells = maxCells;
+            }
+            
+            // Восстанавливаем выбранные ячейки
             this.tableView.restoreSelectedCells(image.selectedCells);
+            
+            return result;
         });
     }
 }

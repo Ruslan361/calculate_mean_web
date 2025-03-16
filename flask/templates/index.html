@@ -57,6 +57,17 @@
                 <button id="remove-horizontal-line">Удалить горизонтальную линию</button>
                 <button id="save-button">Сохранить изображение</button>
                 <button id="export-excel">Экспорт в Excel</button>
+                <div id="grid-settings">
+                    <h4>Адаптивная сетка</h4>
+                    <div class="settings-group">
+                        <label>Вертикальные линии: <input type="number" id="num-vertical" min="1" max="20" value="10"></label>
+                        <label>Горизонтальные линии: <input type="number" id="num-horizontal" min="1" max="20" value="5"></label>
+                        <label>Alpha: <input type="range" id="alpha-value" min="0" max="1" step="0.1" value="0.5">
+                            <span id="alpha-display">0.5</span></label>
+                        <label>Порог: <input type="number" id="threshold-value" min="0" max="255" value="128"></label>
+                        <button id="calculate-grid">Вычислить адаптивную сетку</button>
+                    </div>
+                </div>
             </div>  
         </div>
     </div>

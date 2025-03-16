@@ -165,4 +165,38 @@ th, td {
     background-color: rgba(0, 128, 0, 0.748);
 }
 
+/* Добавьте эти стили в конец файла CSS */
+#grid-settings {
+    margin-top: 20px;
+    border-top: 1px solid #ccc;
+    padding-top: 10px;
+}
+
+.settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.settings-group label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.settings-group input {
+    width: 80px;
+    margin-left: 10px;
+}
+
+.settings-group input[type="range"] {
+    width: 100px;
+}
+
+.max-value {
+    background-color: rgba(255, 235, 59, 0.5) !important;
+    font-weight: bold;
+}
+
 

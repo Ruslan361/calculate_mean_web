@@ -59,7 +59,11 @@ class TableView {
                 
                 // Add click handler for cell selection
                 cell.onclick = () => {
-                    cell.classList.toggle('selected');
+                    if (cell.classList.contains('selected')) {
+                        cell.classList.remove('selected');
+                    } else {
+                        cell.classList.add('selected');
+                    }
                     this.calculateMeanOfSelectedCells();
                 };
             }
@@ -75,6 +79,9 @@ class TableView {
         if (this.pendingSelectedCells) {
             this.restoreSelectedCells(this.pendingSelectedCells);
             this.pendingSelectedCells = null;
+        } else {
+            // Выделяем максимальные значения в каждом столбце
+            //this.highlightMaxValues();
         }
     }
     
@@ -99,6 +106,9 @@ class TableView {
         
         // Update the overall average in the last row
         this.updateOverallAverageRow();
+        
+        // Выделяем максимальные значения в каждом столбце
+        //this.highlightMaxValues();
     }
     
     getSelectedCells() {
@@ -155,7 +165,7 @@ class TableView {
         let count = 0;
         
         // Start from row 1 (skip header) and iterate through all data rows
-        for (let i = 1; i < this.table.rows.length; i++) {
+        for (let i = 1; i < this.table.rows.length-1; i++) {
             // Get the mean cell (last cell in each row)
             const meanCell = this.table.rows[i].cells[this.table.rows[i].cells.length - 1];
             const meanValue = meanCell.textContent;
@@ -250,5 +260,78 @@ class TableView {
         // Generate Excel file and trigger download
         const fileName = "luminance_data_" + new Date().toISOString().split('T')[0] + ".xlsx";
         XLSX.writeFile(wb, fileName);
+    }
+
+    // Добавьте этот метод в класс TableView
+
+    // Метод для выделения максимальных значений в каждом столбце
+    highlightMaxValues() {
+        if (!this.table || !this.currentData) return;
+        
+        // Удаляем все существующие классы max-value
+        // document.querySelectorAll('.selected').forEach(el => {
+        //     el.classList.remove('selected');
+        // });
+        
+        const rowCount = this.table.rows.length;
+        const colCount = this.currentData.luminance[0].length;
+        
+        // Для каждого столбца (исключая первый столбец меток)
+        for (let j = 1; j <= colCount; j++) {
+            let maxVal = -Infinity;
+            let maxRow = -1;
+            
+            // Находим максимальное значение в этом столбце (пропуская строку заголовка и возможную строку общего среднего)
+            for (let i = 1; i < rowCount - 1; i++) {
+                if (this.table.rows[i].cells[j]) {
+                    const cellValue = parseFloat(this.table.rows[i].cells[j].textContent);
+                    if (!isNaN(cellValue) && cellValue > maxVal) {
+                        maxVal = cellValue;
+                        maxRow = i;
+                    }
+                }
+                if (this.table.rows[i].cells[j].classList.contains('selected')) {
+                    this.table.rows[i].cells[j].classList.remove('selected');
+                } 
+            }
+
+            // Выделяем ячейку с максимальным значением
+            if (maxRow > 0) {
+                this.table.rows[maxRow].cells[j].classList.add('selected');
+            }
+        }
+    }
+
+    findMaxValueCells() {
+        if (!this.table || !this.currentData) return [];
+        
+        const maxCells = [];
+        const rowCount = this.table.rows.length;
+        const colCount = this.currentData.luminance[0].length;
+        
+        // Для каждого столбца (исключая первый столбец меток)
+        for (let j = 1; j <= colCount; j++) {
+            let maxVal = -Infinity;
+            let maxRow = -1;
+            
+            // Находим максимальное значение в этом столбце
+            // (пропускаем строку заголовка и возможную строку общего среднего)
+            for (let i = 1; i < rowCount - 1; i++) {
+                if (this.table.rows[i].cells[j]) {
+                    const cellValue = parseFloat(this.table.rows[i].cells[j].textContent);
+                    if (!isNaN(cellValue) && cellValue > maxVal) {
+                        maxVal = cellValue;
+                        maxRow = i;
+                    }
+                }
+            }
+            
+            // Добавляем координаты ячейки в наш массив
+            if (maxRow > 0) {
+                maxCells.push({row: maxRow-1, col: j-1}); // Корректируем индексы для соответствия формату API
+            }
+        }
+        
+        return maxCells;
     }
 }

@@ -71,6 +71,40 @@ def compute_luminance_relative_to_lines(horizontal_lines_: list, vertical_lines_
     grid = (horizontal_lines, vertical_lines)
     return luminance_values, grid
 
+def find_split_positions(image, num_splits, axis=0, alpha=0.5, threshold=128):
+    """
+    Находит позиции разбиения вдоль заданной оси (0 — столбцы, 1 — строки),
+    учитывая составной показатель, который объединяет нормированную среднюю светимость
+    и долю ярких пикселей (выше порога).
+    """
+    if axis == 0:
+        # Анализируем столбцы
+        brightness_sum = np.sum(image, axis=0)  # сумма значений яркости по столбцам
+        binary_count = np.sum(image > threshold, axis=0)  # количество «ярких» пикселей по столбцам
+        total_pixels = image.shape[0]  # количество пикселей в каждом столбце
+    else:
+        # Анализируем строки
+        brightness_sum = np.sum(image, axis=1)
+        binary_count = np.sum(image > threshold, axis=1)
+        total_pixels = image.shape[1]
+    
+    # Нормируем: средняя светимость в диапазоне 0..1 (максимум – 255)
+    norm_brightness = brightness_sum / (255 * total_pixels)
+    # Доля ярких пикселей
+    norm_binary = binary_count / total_pixels
+    
+    # Составной показатель
+    composite = alpha * norm_brightness + (1 - alpha) * norm_binary
+    
+    # Кумулятивная сумма композитного показателя
+    cumsum = np.cumsum(composite)
+    total = cumsum[-1]
+    step = total / (num_splits + 1)
+    positions = []
+    for i in range(1, num_splits + 1):
+        pos = np.searchsorted(cumsum, i * step)
+        positions.append(pos)
+    return np.array(positions).tolist()
 
 @app.route("/gaussian-blur", methods=["POST"])
 def blur_image():
@@ -95,6 +129,27 @@ def mean_luminance():
         #image = apply_gaussian_blur(image)
         luminance_values, grid = compute_luminance_relative_to_lines(horizontal_lines, vertical_lines, image)
         return {"luminance": luminance_values.tolist(), "grid": grid}, 200
+
+@app.route("/adaptive-grid", methods=["POST"])
+def adaptive_grid():
+    if request.method == "POST":
+        base64image = request.json["image"]
+        image = decode_base64_image(base64image)
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        
+        num_vertical = int(request.json.get("num_vertical", 10))
+        num_horizontal = int(request.json.get("num_horizontal", 5))
+        alpha = float(request.json.get("alpha", 0.5))
+        threshold = int(request.json.get("threshold", 128))
+        
+        # Вычисляем оптимальные позиции
+        vertical_lines = find_split_positions(gray_image, num_vertical, axis=0, 
+                                             alpha=alpha, threshold=threshold)
+        horizontal_lines = find_split_positions(gray_image, num_horizontal, axis=1, 
+                                               alpha=alpha, threshold=threshold)
+        
+        return {"vertical_lines": vertical_lines, "horizontal_lines": horizontal_lines}, 200
+
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html"), 200
