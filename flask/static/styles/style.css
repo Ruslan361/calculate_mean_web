@@ -199,4 +199,32 @@ th, td {
     font-weight: bold;
 }
 
+/* Add these to the end of your style.css file */
+.average-value {
+    background-color: #e6f7ff;
+    font-weight: bold;
+}
+
+.overall-average-label {
+    background-color: #f0f7ff;
+    font-weight: bold;
+}
+
+.overall-average-value {
+    background-color: #cce5ff;
+    font-weight: bold;
+    color: #0056b3;
+}
+
+.overall-average {
+    border-top: 2px solid #007bff;
+}
+
+.context-menu {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    background: white;
+    z-index: 1000;
+}
+
 

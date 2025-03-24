@@ -12,6 +12,7 @@ class CanvasView {
         this.isDraggingLine = false;
         this.dragLineIndex = -1;
         this.dragLineType = '';
+        this.contextMenu = null;
         
         this.setupEventListeners();
     }
@@ -21,6 +22,15 @@ class CanvasView {
         this.canvas.addEventListener("mousemove", this.handleMouseMove.bind(this));
         this.canvas.addEventListener("mouseup", this.handleMouseUp.bind(this));
         this.canvas.addEventListener("wheel", this.handleWheel.bind(this));
+        this.canvas.addEventListener("contextmenu", this.handleRightClick.bind(this));
+        
+        // Add document click listener to hide context menu when clicking elsewhere
+        document.addEventListener("click", (e) => {
+            if (this.contextMenu && e.button !== 2) {
+                this.contextMenu.remove();
+                this.contextMenu = null;
+            }
+        });
     }
     
     handleMouseDown(e) {
@@ -84,6 +94,130 @@ class CanvasView {
         this.redraw();
     }
     
+    handleRightClick(e) {
+        e.preventDefault();
+        
+        if (!this.currentImage) return;
+        
+        // Remove existing context menu if any
+        if (this.contextMenu) {
+            this.contextMenu.remove();
+        }
+        
+        const x = e.offsetX / this.scaleFactor;
+        const y = e.offsetY / this.scaleFactor;
+        
+        // Check if clicked near a vertical line
+        const nearVerticalLine = this.currentImage.verticalLines.findIndex(
+            lineX => Math.abs(lineX - x) < 5
+        );
+        
+        // Check if clicked near a horizontal line
+        const nearHorizontalLine = this.currentImage.horizontalLines.findIndex(
+            lineY => Math.abs(lineY - y) < 5
+        );
+        
+        // Create context menu
+        this.contextMenu = document.createElement("div");
+        this.contextMenu.className = "context-menu";
+        this.contextMenu.style.position = "absolute";
+        this.contextMenu.style.left = e.pageX + "px";
+        this.contextMenu.style.top = e.pageY + "px";
+        this.contextMenu.style.background = "white";
+        this.contextMenu.style.border = "1px solid #ccc";
+        this.contextMenu.style.padding = "5px 0";
+        this.contextMenu.style.borderRadius = "4px";
+        this.contextMenu.style.boxShadow = "0 2px 5px rgba(0, 0, 0, 0.2)";
+        this.contextMenu.style.zIndex = "1000";
+        
+        if (nearVerticalLine !== -1) {
+            // Near vertical line, add delete option
+            this.addMenuItem(this.contextMenu, "Удалить вертикальную линию", () => {
+                this.currentImage.verticalLines.splice(nearVerticalLine, 1);
+                this.redraw();
+                // Recalculate luminance
+                window.app.calculateLuminance();
+            });
+        } else if (nearHorizontalLine !== -1) {
+            // Near horizontal line, add delete option
+            this.addMenuItem(this.contextMenu, "Удалить горизонтальную линию", () => {
+                this.currentImage.horizontalLines.splice(nearHorizontalLine, 1);
+                this.redraw();
+                // Recalculate luminance
+                window.app.calculateLuminance();
+            });
+        } else {
+            // Not near any line, add options to add lines
+            this.addMenuItem(this.contextMenu, "Добавить вертикальную линию", () => {
+                this.currentImage.verticalLines.push(x);
+                this.currentImage.verticalLines.sort((a, b) => a - b);
+                this.redraw();
+                // Recalculate luminance
+                window.app.calculateLuminance();
+            });
+            
+            this.addMenuItem(this.contextMenu, "Добавить горизонтальную линию", () => {
+                this.currentImage.horizontalLines.push(y);
+                this.currentImage.horizontalLines.sort((a, b) => a - b);
+                this.redraw();
+                // Recalculate luminance
+                window.app.calculateLuminance();
+            });
+            
+            this.addMenuItem(this.contextMenu, "Выделить ячейки в таблице", () => {
+                // Find the cell in the grid where the click happened
+                const vIndex = this.findGridIndex(x, this.currentImage.verticalLines);
+                const hIndex = this.findGridIndex(y, this.currentImage.horizontalLines);
+                
+                if (vIndex !== -1 && hIndex !== -1) {
+                    // Get table and toggle selection of the cell
+                    const tableView = window.app.tableView;
+                    tableView.toggleCellSelection(hIndex, vIndex);
+                }
+            });
+        }
+        
+        document.body.appendChild(this.contextMenu);
+    }
+    
+    addMenuItem(menu, text, onClick) {
+        const item = document.createElement("div");
+        item.textContent = text;
+        item.style.padding = "8px 12px";
+        item.style.cursor = "pointer";
+        
+        item.onmouseover = () => {
+            item.style.backgroundColor = "#f0f0f0";
+        };
+        
+        item.onmouseout = () => {
+            item.style.backgroundColor = "transparent";
+        };
+        
+        item.onclick = () => {
+            onClick();
+            this.contextMenu.remove();
+            this.contextMenu = null;
+        };
+        
+        menu.appendChild(item);
+    }
+    
+    findGridIndex(value, lines) {
+        lines.sort((a, b) => a - b);
+        if (!lines || lines.length < 1) return -1;
+        if (value < lines[0])
+            return 0;
+        for (let i = 0; i < lines.length - 1; i++) {
+            if (value >= lines[i] && value < lines[i + 1]) {
+                return i + 1;
+            }
+        }
+        if (value > lines[lines.length - 1])
+            return lines.length;
+        return -1;
+    }
+
     setImage(image) {
         this.currentImage = image;
         
@@ -139,6 +273,8 @@ class CanvasView {
         
         this.currentImage.verticalLines.push(this.canvas.width / (2 * this.scaleFactor));
         this.redraw();
+        // Recalculate luminance
+        window.app.calculateLuminance();
     }
     
     addHorizontalLine() {
@@ -146,6 +282,8 @@ class CanvasView {
         
         this.currentImage.horizontalLines.push(this.canvas.height / (2 * this.scaleFactor));
         this.redraw();
+        // Recalculate luminance
+        window.app.calculateLuminance();
     }
     
     removeVerticalLine() {
@@ -153,6 +291,8 @@ class CanvasView {
         
         this.currentImage.verticalLines.pop();
         this.redraw();
+        // Recalculate luminance
+        window.app.calculateLuminance();
     }
     
     removeHorizontalLine() {
@@ -160,6 +300,8 @@ class CanvasView {
         
         this.currentImage.horizontalLines.pop();
         this.redraw();
+        // Recalculate luminance
+        window.app.calculateLuminance();
     }
     
     getCurrentImage() {

@@ -83,6 +83,9 @@ class TableView {
             // Выделяем максимальные значения в каждом столбце
             //this.highlightMaxValues();
         }
+
+        // After creating the table, add highlight classes to average cells
+        this.highlightAverageCells();
     }
     
     calculateMeanOfSelectedCells() {
@@ -109,6 +112,9 @@ class TableView {
         
         // Выделяем максимальные значения в каждом столбце
         //this.highlightMaxValues();
+
+        // Add highlight after updating values
+        this.highlightAverageCells();
     }
     
     getSelectedCells() {
@@ -212,6 +218,9 @@ class TableView {
         // Set the overall average value
         bottomRow.cells[bottomRow.cells.length - 1].textContent = overallAverage;
         bottomRow.cells[bottomRow.cells.length - 1].style.fontWeight = "bold";
+
+        // Add highlight after updating
+        this.highlightAverageCells();
     }
 
     // Add this method to TableView class
@@ -222,16 +231,16 @@ class TableView {
             return;
         }
         
-        // Create worksheet data array
-        const wsData = [];
+        // Gather table data including headers and formatting
+        const tableData = [];
         
-        // Add all rows from table to worksheet data
+        // Add all rows from table to dataset
         for (let i = 0; i < this.table.rows.length; i++) {
             const rowData = [];
             const row = this.table.rows[i];
             
             for (let j = 0; j < row.cells.length; j++) {
-                // For numeric cells, convert to numbers
+                // For numeric cells, try to convert to numbers
                 const cellContent = row.cells[j].textContent;
                 if (i > 0 && j > 0 && cellContent !== "NaN" && !isNaN(parseFloat(cellContent))) {
                     rowData.push(parseFloat(cellContent));
@@ -240,26 +249,52 @@ class TableView {
                 }
             }
             
-            wsData.push(rowData);
+            tableData.push(rowData);
         }
         
-        // Create workbook and worksheet
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        // Get currently selected cells
+        const selectedCells = this.getSelectedCells();
         
-        // Set column widths
-        const colWidths = [];
-        for (let i = 0; i < (wsData[0]?.length || 0); i++) {
-            colWidths.push({ wch: 15 }); // Set width to 15 characters
-        }
-        ws['!cols'] = colWidths;
-        
-        // Add worksheet to workbook
-        XLSX.utils.book_append_sheet(wb, ws, "Luminance Data");
-        
-        // Generate Excel file and trigger download
-        const fileName = "luminance_data_" + new Date().toISOString().split('T')[0] + ".xlsx";
-        XLSX.writeFile(wb, fileName);
+        // Send to the server for Excel generation
+        fetch('/export-excel', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                tableData: tableData,
+                selectedCells: selectedCells
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Server error: ' + response.status);
+            }
+            // Handle the file download
+            return response.blob();
+        })
+        .then(blob => {
+            // Create a temporary URL to the blob
+            const url = window.URL.createObjectURL(blob);
+            
+            // Create a link element to trigger the download
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = "luminance_data_" + new Date().toISOString().split('T')[0] + ".xlsx";
+            
+            // Add to the DOM and trigger click
+            document.body.appendChild(a);
+            a.click();
+            
+            // Clean up
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        })
+        .catch(error => {
+            console.error('Error exporting to Excel:', error);
+            alert('Ошибка при экспорте в Excel: ' + error.message);
+        });
     }
 
     // Добавьте этот метод в класс TableView
@@ -333,5 +368,49 @@ class TableView {
         }
         
         return maxCells;
+    }
+
+    // Add this new method for toggling cell selection from canvas
+    toggleCellSelection(rowIndex, colIndex) {
+        if (!this.table || !this.currentData) return;
+        
+        // Add 1 to indices because of header row/column
+        rowIndex += 1;
+        colIndex += 1;
+        
+        // Check if indices are valid
+        if (rowIndex >= this.table.rows.length || 
+            colIndex >= this.table.rows[rowIndex].cells.length) {
+            return;
+        }
+        
+        const cell = this.table.rows[rowIndex].cells[colIndex];
+        if (cell.classList.contains('selected')) {
+            cell.classList.remove('selected');
+        } else {
+            cell.classList.add('selected');
+        }
+        
+        this.calculateMeanOfSelectedCells();
+    }
+
+    highlightAverageCells() {
+        if (!this.table || this.table.rows.length === 0) return;
+        
+        // Highlight all cells in the last column (Среднее по среднему)
+        for (let i = 1; i < this.table.rows.length; i++) {
+            const row = this.table.rows[i];
+            const lastCell = row.cells[row.cells.length - 1];
+            lastCell.classList.add('average-value');
+        }
+        
+        // Highlight the overall average (Общее среднее) 
+        if (this.table.rows.length > 0) {
+            const lastRow = this.table.rows[this.table.rows.length - 1];
+            if (lastRow.classList.contains('overall-average')) {
+                lastRow.cells[0].classList.add('overall-average-label');
+                lastRow.cells[lastRow.cells.length - 1].classList.add('overall-average-value');
+            }
+        }
     }
 }

@@ -60,7 +60,7 @@ class ImageProcessor {
         const N = 3;
         const stepWidth = this.img.width / N;
         this.verticalLines = [];
-        for (let i = 0; i < this.img.width; i += stepWidth) {
+        for (let i = stepWidth; i < this.img.width; i += stepWidth) {
             this.verticalLines.push(i);
         }
     }
@@ -69,7 +69,7 @@ class ImageProcessor {
         const N = 3;
         const stepHeight = this.img.height / N;
         this.horizontalLines = [];
-        for (let i = 0; i < this.img.height; i += stepHeight) {
+        for (let i = stepHeight; i < this.img.height; i += stepHeight) {
             this.horizontalLines.push(i);
         }
     }

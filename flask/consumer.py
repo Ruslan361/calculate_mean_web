@@ -5,6 +5,13 @@ import image_processor as image_processor
 import base64
 import cv2
 import numpy as np
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill, Font, Alignment
+from io import BytesIO
+from flask import send_file
+import os
+import json
+import time
 
 app = Flask(__name__)
 
@@ -149,6 +156,98 @@ def adaptive_grid():
                                                alpha=alpha, threshold=threshold)
         
         return {"vertical_lines": vertical_lines, "horizontal_lines": horizontal_lines}, 200
+
+@app.route("/export-excel", methods=["POST"])
+def export_excel():
+    if request.method == "POST":
+        try:
+            # Get data from request
+            data = request.json
+            table_data = data.get("tableData", [])
+            selected_cells = data.get("selectedCells", [])
+            
+            # Create a new workbook and select the active worksheet
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Luminance Data"
+            
+            # Define styles
+            selected_fill = PatternFill(start_color="00C46D", end_color="00C46D", fill_type="solid")
+            average_fill = PatternFill(start_color="E6F7FF", end_color="E6F7FF", fill_type="solid")
+            overall_label_fill = PatternFill(start_color="F0F7FF", end_color="F0F7FF", fill_type="solid")
+            overall_value_fill = PatternFill(start_color="CCE5FF", end_color="CCE5FF", fill_type="solid")
+            bold_font = Font(bold=True)
+            blue_font = Font(bold=True, color="0056B3")
+            
+            # Write data to the worksheet
+            for row_idx, row in enumerate(table_data):
+                for col_idx, cell_value in enumerate(row):
+                    excel_cell = ws.cell(row=row_idx+1, column=col_idx+1)
+                    
+                    # Handle numeric values
+                    if isinstance(cell_value, (int, float)) or (isinstance(cell_value, str) and cell_value.replace('.', '', 1).isdigit()):
+                        try:
+                            excel_cell.value = float(cell_value)
+                        except (ValueError, TypeError):
+                            excel_cell.value = cell_value
+                    else:
+                        excel_cell.value = cell_value
+                    
+                    # Apply formatting based on cell type
+                    # Check if this is a selected cell
+                    is_selected = any(sc["row"] == row_idx-1 and sc["col"] == col_idx-1 for sc in selected_cells)
+                    
+                    # Apply average styling to last column
+                    if col_idx == len(row) - 1 and row_idx > 0:
+                        if row_idx == len(table_data) - 1:  # Overall average value
+                            excel_cell.fill = overall_value_fill
+                            excel_cell.font = blue_font
+                        else:  # Row average
+                            excel_cell.fill = average_fill
+                            excel_cell.font = bold_font
+                    
+                    # Apply overall average row styling
+                    if row_idx == len(table_data) - 1:
+                        if col_idx == 0:  # Overall average label
+                            excel_cell.fill = overall_label_fill
+                            excel_cell.font = bold_font
+                    
+                    # Apply selected cell styling (overrides other styling)
+                    if is_selected and row_idx > 0 and col_idx > 0 and col_idx < len(row) - 1:
+                        excel_cell.fill = selected_fill
+            
+            # Set column widths
+            for col in ws.columns:
+                max_length = 0
+                column = col[0].column_letter
+                for cell in col:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = (max_length + 2) * 1.2
+                ws.column_dimensions[column].width = adjusted_width
+            
+            # Save to a BytesIO object
+            output = BytesIO()
+            wb.save(output)
+            output.seek(0)
+            
+            # Generate a unique filename
+            filename = f"luminance_data_{int(time.time())}.xlsx"
+            
+            # Send the file as an attachment
+            return send_file(
+                output,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                as_attachment=True,
+                download_name=filename
+            )
+            
+        except Exception as e:
+            print(f"Error generating Excel file: {e}")
+            return {"error": str(e)}, 500
 
 @app.route("/", methods=["GET"])
 def index():
