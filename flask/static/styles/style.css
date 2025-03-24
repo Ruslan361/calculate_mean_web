@@ -227,4 +227,32 @@ th, td {
     z-index: 1000;
 }
 
+/* Add these styles for the context submenu */
+.context-submenu {
+    min-width: 150px;
+}
+
+.context-menu div:hover > .context-submenu {
+    display: block !important;
+}
+
+/* Add styles for category management */
+.category-manager {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.category-color {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+    border: 1px solid #ccc;
+}
+
+/* Make sure selected cells without explicit color still have the default style */
+.selected {
+    background-color: rgba(0, 128, 0, 0.748);
+}
+
 

@@ -57,7 +57,8 @@ class ImageService {
                         horizontalLines: jsonData.metadata.horizontalLines,
                         selectedCells: jsonData.metadata.selectedCells,
                         luminanceData: jsonData.metadata.luminance,
-                        blurredImage: jsonData.blurredImage
+                        blurredImage: jsonData.blurredImage,
+                        selectionCategories: jsonData.metadata.selectionCategories
                     });
                     
                     resolve(image);
@@ -73,7 +74,9 @@ class ImageService {
     saveImageWithMetadata(image, selectedCells) {
         if (!image) return;
         
-        image.selectedCells = selectedCells;
+        if (selectedCells) {
+            image.updateSelectedCells(selectedCells);
+        }
         
         const jsonData = {
             originalImage: image.sourceImg,
@@ -83,7 +86,8 @@ class ImageService {
                 timestamp: new Date().toISOString(),
                 verticalLines: image.verticalLines,
                 horizontalLines: image.horizontalLines,
-                selectedCells: selectedCells,
+                selectedCells: image.selectedCells,
+                selectionCategories: image.selectionCategories,
                 name: image.name
             }
         };

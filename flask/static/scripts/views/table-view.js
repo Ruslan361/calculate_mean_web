@@ -122,10 +122,37 @@ class TableView {
         
         if (!this.table) return selectedCells;
         
+        // Get the current image to access categories
+        const currentImage = window.app.canvasView.getCurrentImage();
+        if (!currentImage) return selectedCells;
+        
         for (let i = 1; i < this.table.rows.length; i++) {
             for (let j = 1; j < this.table.rows[i].cells.length - 1; j++) {
-                if (this.table.rows[i].cells[j].classList.contains('selected')) {
-                    selectedCells.push({row: i-1, col: j-1});
+                const cell = this.table.rows[i].cells[j];
+                
+                if (cell.classList.contains('selected')) {
+                    // Get cell categories from data attribute
+                    const categories = cell.getAttribute('data-categories');
+                    
+                    if (categories) {
+                        // Multiple categories
+                        categories.split(',').forEach(categoryId => {
+                            selectedCells.push({
+                                row: i-1, 
+                                col: j-1,
+                                categoryId: categoryId,
+                                id: currentImage.generateUniqueId()
+                            });
+                        });
+                    } else {
+                        // Legacy format or default category
+                        selectedCells.push({
+                            row: i-1, 
+                            col: j-1,
+                            categoryId: 'default',
+                            id: currentImage.generateUniqueId()
+                        });
+                    }
                 }
             }
         }
@@ -146,6 +173,21 @@ class TableView {
         const rowCount = this.table.rows.length - 1; // Subtract header row
         const colCount = this.currentData.luminance[0] ? this.currentData.luminance[0].length : 0;
         
+        // Clear all existing selections first
+        for (let i = 1; i < this.table.rows.length; i++) {
+            for (let j = 1; j < this.table.rows[i].cells.length - 1; j++) {
+                const cell = this.table.rows[i].cells[j];
+                // Remove all selection classes
+                cell.className = '';
+                // Remove any custom styles
+                cell.style.backgroundColor = '';
+            }
+        }
+        
+        // Get the current image to access categories
+        const currentImage = window.app.canvasView.getCurrentImage();
+        if (!currentImage) return;
+        
         // Filter valid cells with improved boundary checking
         const validCells = selectedCells.filter(cell => {
             // Check if cell indices are within current table dimensions
@@ -153,11 +195,29 @@ class TableView {
                    cell.col >= 0 && cell.col < colCount;
         });
         
-        // Apply 'selected' class to valid cells
+        // Apply selection styles to valid cells
         validCells.forEach(cell => {
             if (this.table.rows[cell.row + 1] && 
                 this.table.rows[cell.row + 1].cells[cell.col + 1]) {
-                this.table.rows[cell.row + 1].cells[cell.col + 1].classList.add('selected');
+                const tableCell = this.table.rows[cell.row + 1].cells[cell.col + 1];
+                // Handle backward compatibility
+                if (cell.categoryId) {
+                    // Get the category color
+                    const category = currentImage.getCategoryById(cell.categoryId);
+                    // Apply the category color
+                    tableCell.style.backgroundColor = category.color;
+                    // Add data attribute to track the categories
+                    const cellCategories = tableCell.getAttribute('data-categories') || '';
+                    if (!cellCategories.includes(cell.categoryId)) {
+                        tableCell.setAttribute('data-categories', 
+                            cellCategories ? `${cellCategories},${cell.categoryId}` : cell.categoryId);
+                    }
+                    // Still add selected class for existing code compatibility
+                    tableCell.classList.add('selected');
+                } else {
+                    // Legacy format - add default selected class
+                    tableCell.classList.add('selected');
+                }
             }
         });
         
@@ -371,7 +431,7 @@ class TableView {
     }
 
     // Add this new method for toggling cell selection from canvas
-    toggleCellSelection(rowIndex, colIndex) {
+    toggleCellSelection(rowIndex, colIndex, categoryId = 'default') {
         if (!this.table || !this.currentData) return;
         
         // Add 1 to indices because of header row/column
@@ -385,10 +445,39 @@ class TableView {
         }
         
         const cell = this.table.rows[rowIndex].cells[colIndex];
-        if (cell.classList.contains('selected')) {
-            cell.classList.remove('selected');
+        const currentImage = window.app.canvasView.getCurrentImage();
+        
+        if (!currentImage) return;
+        
+        // Get the category
+        const category = currentImage.getCategoryById(categoryId);
+        
+        // Get current cell categories
+        const cellCategories = cell.getAttribute('data-categories') || '';
+        const categoryArray = cellCategories ? cellCategories.split(',') : [];
+        
+        if (categoryArray.includes(categoryId)) {
+            // Remove this category
+            const updatedCategories = categoryArray.filter(cat => cat !== categoryId).join(',');
+            cell.setAttribute('data-categories', updatedCategories);
+            
+            // If all categories removed, remove selected class
+            if (!updatedCategories) {
+                cell.classList.remove('selected');
+                cell.style.backgroundColor = '';
+            } else {
+                // Otherwise, use the color of the last remaining category
+                const lastCategory = currentImage.getCategoryById(
+                    categoryArray[categoryArray.length - 1]
+                );
+                cell.style.backgroundColor = lastCategory.color;
+            }
         } else {
+            // Add this category
+            categoryArray.push(categoryId);
+            cell.setAttribute('data-categories', categoryArray.join(','));
             cell.classList.add('selected');
+            cell.style.backgroundColor = category.color;
         }
         
         this.calculateMeanOfSelectedCells();
