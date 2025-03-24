@@ -3,6 +3,7 @@
 <head>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <meta charset="UTF-8">
     <!-- <favicon href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon"> -->
     <title>Средняя светимость</title>
@@ -49,21 +50,33 @@
                 <table id="luminance-table"></table>
             </div>
             <div id="control">
-                <button onclick="calculateLuminance()">Посчитать светимость</button> 
-                <button onclick="addVerticalLine()">Добавить вертикальную линию</button>
-                <button onclick="addHorizontalLine()">Добавить горизонтальную линию</button>
-                <button onclick="removeVerticalLine()">Удалить вертикальную линию</button>
-                <button onclick="removeHorizontalLine()">Удалить горизонтальную линию</button>
+                <button id="calculate-luminance">Посчитать светимость</button> 
+                <button id="add-vertical-line">Добавить вертикальную линию</button>
+                <button id="add-horizontal-line">Добавить горизонтальную линию</button>
+                <button id="remove-vertical-line">Удалить вертикальную линию</button>
+                <button id="remove-horizontal-line">Удалить горизонтальную линию</button>
                 <button id="save-button">Сохранить изображение</button>
+                <button id="export-excel">Экспорт в Excel</button>
+                <div id="grid-settings">
+                    <h4>Адаптивная сетка</h4>
+                    <div class="settings-group">
+                        <label>Вертикальные линии: <input type="number" id="num-vertical" min="1" max="20" value="10"></label>
+                        <label>Горизонтальные линии: <input type="number" id="num-horizontal" min="1" max="20" value="5"></label>
+                        <label>Alpha: <input type="range" id="alpha-value" min="0" max="1" step="0.1" value="0.5">
+                            <span id="alpha-display">0.5</span></label>
+                        <label>Порог: <input type="number" id="threshold-value" min="0" max="255" value="128"></label>
+                        <button id="calculate-grid">Вычислить адаптивную сетку</button>
+                    </div>
+                </div>
             </div>  
         </div>
     </div>
-    <script src="{{ url_for('static', filename='scripts/canvas.js') }}"></script>
-    <script src="{{ url_for('static', filename='scripts/load.js') }}"></script>
-    <script src="{{ url_for('static', filename='scripts/process_image.js') }}"></script>
-    <script src="{{ url_for('static', filename='scripts/sidebar.js') }}"></script>
-    <script src="{{ url_for('static', filename='scripts/button_controller.js') }}"></script>
-    <script src="{{ url_for('static', filename='scripts/save_image.js') }}"></script>
-    <script src="{{ url_for('static', filename='scripts/.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/services/api-service.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/services/image-service.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/models/image-processor.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/views/canvas-view.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/views/table-view.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/views/sidebar-view.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/app.js') }}"></script>
 </body>
 </html>
