@@ -260,4 +260,18 @@ class ImageProcessor {
     get selectedCells() {
         return this.getSelectedCells();
     }
+
+    /**
+     * Synchronizes the current table selections with the ImageProcessor
+     */
+    syncSelectionsWithImageProcessor() {
+        const currentImage = window.app.canvasView.getCurrentImage();
+        if (!currentImage) return;
+        
+        // Get all currently selected cells from the table
+        const selectedCells = this.getSelectedCells();
+        
+        // Update the image processor with these selections
+        currentImage.updateSelectedCells(selectedCells);
+    }
 }

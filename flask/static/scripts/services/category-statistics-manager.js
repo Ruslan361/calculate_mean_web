@@ -154,4 +154,22 @@ class CategoryStatisticsManager {
         // Return rgba
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
+
+    /**
+     * Sets and displays the overall average across all selected cells
+     * @param {string} averageValue - The calculated average value
+     */
+    setOverallAverage(averageValue) {
+        // Find or create overall average element
+        let overallElement = document.getElementById('overall-category-average');
+        if (!overallElement) {
+            overallElement = document.createElement('div');
+            overallElement.id = 'overall-category-average';
+            overallElement.className = 'overall-category-average';
+            this.container.appendChild(overallElement);
+        }
+        
+        // Update the content
+        overallElement.innerHTML = `<strong>Общее среднее всех выделенных ячеек:</strong> ${averageValue}`;
+    }
 }
