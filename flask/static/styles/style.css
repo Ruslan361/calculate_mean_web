@@ -210,30 +210,34 @@ th, td {
     font-weight: bold;
 }
 
-.overall-average-value {
+/* .overall-average-value {
     background-color: #cce5ff;
     font-weight: bold;
     color: #0056b3;
-}
+} */
 
 .overall-average {
     border-top: 2px solid #007bff;
 }
 
+/* Update context menu styles to remove scrolling */
 .context-menu {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     border-radius: 4px;
     background: white;
     z-index: 1000;
+    /* Remove these properties that enable scrolling */
+    /* max-height: 80vh; */
+    /* overflow-y: auto; */
+    max-width: 250px;
 }
 
-/* Add these styles for the context submenu */
+/* Update submenu styles as well */
 .context-submenu {
     min-width: 150px;
-}
-
-.context-menu div:hover > .context-submenu {
-    display: block !important;
+    /* Remove these properties */
+    /* max-height: 300px; */
+    /* overflow-y: auto; */
 }
 
 /* Add styles for category management */
@@ -253,6 +257,186 @@ th, td {
 /* Make sure selected cells without explicit color still have the default style */
 .selected {
     background-color: rgba(0, 128, 0, 0.748);
+}
+
+/* Table header styling */
+.table-header-row {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.table-header-cell {
+    background-color: #f2f2f2;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.corner-header {
+    position: sticky;
+    left: 0;
+    z-index: 11; /* Higher than other headers to be on top at intersection */
+    background-color: #e6e6e6;
+}
+
+.row-header {
+    position: sticky;
+    left: 0;
+    z-index: 9;
+    background-color: #f2f2f2;
+}
+
+.average-header {
+    background-color: #e6f7ff;
+}
+
+/* Table container for horizontal scrolling */
+.table-container {
+    overflow-x: auto;
+    max-width: 100%;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Category averages styling */
+.category-averages {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+.category-averages h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 18px;
+    color: #333;
+}
+
+.category-averages-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.category-averages-table th,
+.category-averages-table td {
+    padding: 8px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+
+.category-averages-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.color-swatch {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+/* Category settings button */
+#category-settings-btn {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    margin: 5px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+#category-settings-btn:hover {
+    background-color: #5a6268;
+}
+
+#category-settings-btn .icon {
+    margin-right: 5px;
+}
+
+/* Category mean cell styling */
+.category-average {
+    background-color: rgba(230, 247, 255, 0.7);
+    font-weight: bold;
+}
+
+.category-average-value {
+    font-weight: bold;
+}
+
+/* Category summary row styling */
+.category-summary-row {
+    background-color: #f0f7ff;
+    border-top: 1px solid #007bff;
+}
+
+/* Enhanced category statistics table */
+.category-averages-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.category-averages-table th,
+.category-averages-table td {
+    padding: 8px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+
+.category-averages-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+/* Категории выделения */
+.highlight-1 {
+    border: 2px solid #00C46D;
+}
+
+.highlight-2 {
+    border: 2px solid #FFC107;
+}
+
+.highlight-3 {
+    border: 2px solid #F44336;
+}
+
+.highlight-4 {
+    border: 2px solid #2196F3;
+}
+
+.highlight-5 {
+    border: 2px solid #9C27B0;
+}
+
+/* Обзор категорий после таблицы */
+.category-averages {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.category-summary-row {
+    background-color: #eaf6ff;
+    border-top: 1px solid #007bff;
+}
+
+.category-summary-row td {
+    padding: 10px 8px;
 }
 
 

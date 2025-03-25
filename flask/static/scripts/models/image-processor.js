@@ -1,4 +1,49 @@
 /**
+ * Class for managing a category of selected cells
+ */
+class Category {
+    constructor(id, name, color) {
+        this.id = id;
+        this.name = name;
+        this.color = color;
+        this.selectedCells = []; // Array of {row, col} objects
+    }
+
+    addCell(row, col) {
+        // Check if cell already exists in this category
+        const existingIndex = this.selectedCells.findIndex(
+            cell => cell.row === row && cell.col === col
+        );
+        
+        if (existingIndex === -1) {
+            this.selectedCells.push({ row, col });
+            return true; // Cell was added
+        }
+        return false; // Cell already exists
+    }
+
+    removeCell(row, col) {
+        const existingIndex = this.selectedCells.findIndex(
+            cell => cell.row === row && cell.col === col
+        );
+        
+        if (existingIndex !== -1) {
+            this.selectedCells.splice(existingIndex, 1);
+            return true; // Cell was removed
+        }
+        return false; // Cell wasn't found
+    }
+
+    hasCell(row, col) {
+        return this.selectedCells.some(cell => cell.row === row && cell.col === col);
+    }
+
+    getCells() {
+        return [...this.selectedCells];
+    }
+}
+
+/**
  * Class for processing and managing images
  */
 class ImageProcessor {
@@ -7,28 +52,40 @@ class ImageProcessor {
         this.name = options.name;
         this.verticalLines = options.verticalLines || [];
         this.horizontalLines = options.horizontalLines || [];
-        this.selectedCells = this.initializeSelectedCells(options.selectedCells || []);
         this.luminanceData = options.luminanceData || null;
         this.blurredImageUrl = options.blurredImage || null;
         this.img = new Image();
-        this.selectionCategories = options.selectionCategories || [
-            { id: 'default', name: 'Default Selection', color: '#00C46D' },
-            { id: 'highlight', name: 'Highlight', color: '#FFC107' },
-            { id: 'important', name: 'Important', color: '#F44336' }
+        
+        // Initialize categories
+        this.categories = [];
+        const defaultCategories = options.selectionCategories || [
+            { id: 'epidermis', name: 'Эпидермис', color: '#00C46D' },
+            { id: 'dermis', name: 'Дерма', color: '#FFC107' }
         ];
+        
+        // Create category objects
+        defaultCategories.forEach(cat => {
+            this.categories.push(new Category(cat.id, cat.name, cat.color));
+        });
+        
+        // Initialize selected cells
+        this.initializeSelectedCells(options.selectedCells || []);
     }
 
     initializeSelectedCells(cells) {
         // Handle backward compatibility
-        if (cells.length > 0 && cells[0].hasOwnProperty('row') && !cells[0].hasOwnProperty('categoryId')) {
-            return cells.map(cell => ({
-                row: cell.row,
-                col: cell.col,
-                categoryId: 'default',
-                id: this.generateUniqueId()
-            }));
+        if (cells.length > 0) {
+            cells.forEach(cell => {
+                // Handle legacy format without categoryId
+                const categoryId = cell.categoryId || 'default';
+                // Find the category
+                const category = this.getCategoryById(categoryId);
+                // Add cell to category
+                if (category) {
+                    category.addCell(cell.row, cell.col);
+                }
+            });
         }
-        return cells;
     }
 
     generateUniqueId() {
@@ -96,65 +153,87 @@ class ImageProcessor {
         }
     }
     
+    // Convert from TableView selected cells format to our new category-based format
     updateSelectedCells(selectedCells) {
-        this.selectedCells = selectedCells || [];
-    }
-    
-    addSelectedCell(row, col, categoryId = 'default') {
-        // Check if this cell with this category already exists
-        const existingIndex = this.selectedCells.findIndex(
-            cell => cell.row === row && cell.col === col && cell.categoryId === categoryId
-        );
+        // Clear all current selections
+        this.categories.forEach(category => {
+            category.selectedCells = [];
+        });
         
-        if (existingIndex === -1) {
-            // Add new selection
-            this.selectedCells.push({
-                row: row,
-                col: col,
-                categoryId: categoryId,
-                id: this.generateUniqueId()
+        // Add new selections
+        if (selectedCells && selectedCells.length) {
+            selectedCells.forEach(cell => {
+                const categoryId = cell.categoryId || 'default';
+                const category = this.getCategoryById(categoryId);
+                if (category) {
+                    category.addCell(cell.row, cell.col);
+                }
             });
+        }
+    }
+    
+    // Add a cell to a specific category
+    addSelectedCell(row, col, categoryId = 'default') {
+        const category = this.getCategoryById(categoryId);
+        if (!category) return false;
+        
+        // Check if already exists and toggle
+        if (category.hasCell(row, col)) {
+            return category.removeCell(row, col);
         } else {
-            // Remove existing selection (toggle)
-            this.selectedCells.splice(existingIndex, 1);
+            return category.addCell(row, col);
         }
     }
     
-    removeSelectedCell(id) {
-        const index = this.selectedCells.findIndex(cell => cell.id === id);
-        if (index !== -1) {
-            this.selectedCells.splice(index, 1);
-        }
+    // For backward compatibility - get all selected cells in the old format
+    getSelectedCells() {
+        const result = [];
+        this.categories.forEach(category => {
+            category.selectedCells.forEach(cell => {
+                result.push({
+                    row: cell.row,
+                    col: cell.col,
+                    categoryId: category.id,
+                    id: this.generateUniqueId()
+                });
+            });
+        });
+        return result;
     }
     
+    // Get a specific category by ID
     getCategoryById(categoryId) {
-        return this.selectionCategories.find(cat => cat.id === categoryId) || 
-               this.selectionCategories[0]; // Default to first category if not found
+        return this.categories.find(cat => cat.id === categoryId) || 
+               this.categories[0]; // Default to first category if not found
     }
     
+    // Add a new category
     addSelectionCategory(name, color) {
         const id = name.toLowerCase().replace(/\s+/g, '-');
         
         // Check if category with this ID already exists
-        if (!this.selectionCategories.some(cat => cat.id === id)) {
-            this.selectionCategories.push({
-                id: id,
-                name: name,
-                color: color
-            });
+        if (!this.categories.some(cat => cat.id === id)) {
+            this.categories.push(new Category(id, name, color));
+            return true;
         }
+        return false;
     }
     
+    // Remove a category if possible
     removeSelectionCategory(categoryId) {
         // Don't remove if it's the only category or if it has cells selected with it
-        if (this.selectionCategories.length <= 1 || 
-            this.selectedCells.some(cell => cell.categoryId === categoryId)) {
+        if (this.categories.length <= 1) {
             return false;
         }
         
-        const index = this.selectionCategories.findIndex(cat => cat.id === categoryId);
+        const index = this.categories.findIndex(cat => cat.id === categoryId);
         if (index !== -1) {
-            this.selectionCategories.splice(index, 1);
+            // Check if category has any selected cells
+            if (this.categories[index].selectedCells.length > 0) {
+                return false;
+            }
+            
+            this.categories.splice(index, 1);
             return true;
         }
         return false;
@@ -166,5 +245,19 @@ class ImageProcessor {
     
     get blurredImage() {
         return this.blurredImageUrl;
+    }
+    
+    // For backward compatibility
+    get selectionCategories() {
+        return this.categories.map(cat => ({
+            id: cat.id,
+            name: cat.name,
+            color: cat.color
+        }));
+    }
+    
+    // For backward compatibility
+    get selectedCells() {
+        return this.getSelectedCells();
     }
 }

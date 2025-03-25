@@ -7,114 +7,430 @@ class TableView {
         this.currentData = null;
         this.tableRendered = false;
         this.pendingSelectedCells = null;
+        this.excelExporter = new ExcelExporter();
+        this.contextMenuManager = new ContextMenuManager(); // Add context menu manager
+        this.categoryStatsManager = new CategoryStatisticsManager(); // Add the statistics manager
     }
     
     updateTable(data) {
         this.currentData = data;
         this.table.innerHTML = "";
         
-        // Check if we have valid data to display
+        if (this.handleEmptyData(data)) return;
+        
+        const currentImage = window.app.canvasView.getCurrentImage();
+        const categories = currentImage ? currentImage.selectionCategories : [];
+        
+        this.createHeaderRow(data, categories);
+        this.createDataRows(data, categories);
+        this.finalizeTableCreation();
+    }
+    
+    /**
+     * Handles empty data case
+     * @param {Object} data - The luminance data
+     * @returns {boolean} - true if data is empty and placeholder was added
+     */
+    handleEmptyData(data) {
         if (!data || !data.luminance || !data.grid || 
             !data.grid[0] || !data.grid[1] || 
             data.luminance.length === 0) {
-            // Display empty or placeholder message
+            
             const emptyRow = this.table.insertRow();
             const cell = emptyRow.insertCell(0);
             cell.textContent = "No luminance data available";
-            // Use a more appropriate column span based on previous data or default to a larger value
+            
             const spanWidth = (this.currentData && this.currentData.luminance && 
                               this.currentData.luminance[0]) ? 
                               this.currentData.luminance[0].length + 2 : 5;
             cell.colSpan = spanWidth;
-            return;
+            return true;
         }
-        
-        // Create header row
+        return false;
+    }
+    
+    /**
+     * Creates the header row with column labels
+     * @param {Object} data - The luminance data
+     * @param {Array} categories - The categories
+     */
+    createHeaderRow(data, categories) {
         let headerRow = this.table.insertRow();
-        headerRow.insertCell(0).textContent = "Y\\X";
+        headerRow.className = 'table-header-row';
         
+        // Create corner cell
+        let cornerCell = headerRow.insertCell(0);
+        cornerCell.textContent = "Y\\X";
+        cornerCell.className = 'table-header-cell corner-header';
+        
+        // Create column headers
+        this.createColumnHeaders(headerRow, data);
+        
+        // Create category mean headers
+        this.createCategoryHeaders(headerRow, data, categories);
+    }
+    
+    /**
+     * Creates column headers for the grid
+     * @param {HTMLTableRowElement} headerRow - The header row
+     * @param {Object} data - The luminance data
+     */
+    createColumnHeaders(headerRow, data) {
         for (let i = 1; i < data.grid[1].length; i++) {
-            headerRow.insertCell(i).textContent = 
+            let headerCell = headerRow.insertCell(i);
+            headerCell.textContent = 
                 data.grid[1][i-1].toFixed(0).toString() + " - " + data.grid[1][i].toFixed(0).toString();
+            headerCell.className = 'table-header-cell';
         }
-        
-        headerRow.insertCell(data.luminance[0].length + 1).textContent = "Среднее по среднему";
-
-        // Create data rows
+    }
+    
+    /**
+     * Creates category mean headers
+     * @param {HTMLTableRowElement} headerRow - The header row
+     * @param {Object} data - The luminance data
+     * @param {Array} categories - The categories
+     */
+    createCategoryHeaders(headerRow, data, categories) {
+        for (let i = 0; i < categories.length; i++) {
+            const category = categories[i];
+            let catHeaderCell = headerRow.insertCell(data.luminance[0].length + 1 + i);
+            catHeaderCell.textContent = "Сред. " + category.name;
+            catHeaderCell.className = 'table-header-cell average-header';
+            catHeaderCell.style.backgroundColor = this.hexToRgba(category.color, 0.2);
+        }
+    }
+    
+    /**
+     * Creates data rows with cell values
+     * @param {Object} data - The luminance data
+     * @param {Array} categories - The categories
+     */
+    createDataRows(data, categories) {
         for (let i = 0; i < data.luminance.length; i++) {
             let row = this.table.insertRow();
             
-            // Add row header (with safe access)
-            if (i < data.grid[0].length - 1) {
-                row.insertCell(0).textContent = 
-                    data.grid[0][i].toFixed(0).toString() + " - " + data.grid[0][i+1].toFixed(0).toString();
-            } else {
-                row.insertCell(0).textContent = "Row " + i;
-            }
+            this.createRowHeader(row, data, i);
+            this.createDataCells(row, data, i);
+            this.createCategoryCells(row, data, categories);
+        }
+    }
+    
+    /**
+     * Creates the row header cell
+     * @param {HTMLTableRowElement} row - The table row
+     * @param {Object} data - The luminance data
+     * @param {number} rowIndex - The row index
+     */
+    createRowHeader(row, data, rowIndex) {
+        let rowHeaderCell = row.insertCell(0);
+        rowHeaderCell.className = 'table-header-cell row-header';
+        
+        if (rowIndex < data.grid[0].length - 1) {
+            rowHeaderCell.textContent = 
+                data.grid[0][rowIndex].toFixed(0).toString() + " - " + 
+                data.grid[0][rowIndex+1].toFixed(0).toString();
+        } else {
+            rowHeaderCell.textContent = "Row " + rowIndex;
+        }
+    }
+    
+    /**
+     * Creates data cells for a row
+     * @param {HTMLTableRowElement} row - The table row
+     * @param {Object} data - The luminance data
+     * @param {number} rowIndex - The row index
+     */
+    createDataCells(row, data, rowIndex) {
+        for (let j = 0; j < data.luminance[rowIndex].length; j++) {
+            let cell = row.insertCell(j+1);
+            cell.textContent = data.luminance[rowIndex][j].toFixed(3).toString();
             
-            // Add data cells
-            for (let j = 0; j < data.luminance[i].length; j++) {
-                let cell = row.insertCell(j+1);
-                cell.textContent = data.luminance[i][j].toFixed(3).toString();
-                
-                // Add click handler for cell selection
-                cell.onclick = () => {
+            // Get current image to access categories
+            const currentImage = window.app.canvasView.getCurrentImage();
+            
+            // Left click handler - always select with first category
+            cell.onclick = (e) => {
+                if (currentImage && currentImage.selectionCategories.length > 0) {
+                    // Use first category for left click
+                    const firstCategory = currentImage.selectionCategories[0];
+                    this.toggleCellSelection(rowIndex, j, firstCategory.id);
+                } else {
+                    // Legacy behavior if no categories
                     if (cell.classList.contains('selected')) {
                         cell.classList.remove('selected');
                     } else {
                         cell.classList.add('selected');
                     }
                     this.calculateMeanOfSelectedCells();
-                };
-            }
+                }
+            };
             
-            // Add mean cell
-            row.insertCell(data.luminance[0].length + 1).textContent = "NaN";
+            // Right click handler - behavior depends on category count
+            cell.oncontextmenu = (e) => {
+                e.preventDefault(); // Prevent default context menu
+                
+                if (!currentImage) return;
+                
+                const categoryCount = currentImage.selectionCategories.length;
+                
+                if (categoryCount <= 1) {
+                    // Standard behavior if only 1 category - same as left click
+                    if (cell.classList.contains('selected')) {
+                        cell.classList.remove('selected');
+                    } else {
+                        cell.classList.add('selected');
+                    }
+                    this.calculateMeanOfSelectedCells();
+                } 
+                else if (categoryCount === 2) {
+                    // Directly toggle second category when there are exactly 2
+                    const secondCategory = currentImage.selectionCategories[1];
+                    this.toggleCellSelection(rowIndex, j, secondCategory.id);
+                }
+                else {
+                    // Show category selection menu for 3+ categories
+                    this.showCellCategoryMenu(e, rowIndex, j);
+                }
+            };
         }
+    }
+    
+    /**
+     * Shows a context menu for selecting cell category
+     * @param {MouseEvent} e - The mouse event
+     * @param {number} rowIndex - The row index
+     * @param {number} colIndex - The column index
+     */
+    showCellCategoryMenu(e, rowIndex, colIndex) {
+        const currentImage = window.app.canvasView.getCurrentImage();
+        if (!currentImage) return;
         
-        // Add a flag indicating the table is fully rendered
+        // Use the context menu manager to show the menu
+        this.contextMenuManager.showCellMenu(
+            currentImage,
+            window.app.canvasView,
+            e.pageX,
+            e.pageY,
+            rowIndex,
+            colIndex
+        );
+    }
+    
+    /**
+     * Creates category mean cells for a row
+     * @param {HTMLTableRowElement} row - The table row
+     * @param {Object} data - The luminance data
+     * @param {Array} categories - The categories
+     */
+    createCategoryCells(row, data, categories) {
+        for (let c = 0; c < categories.length; c++) {
+            row.insertCell(data.luminance[0].length + 1 + c).textContent = "NaN";
+        }
+    }
+    
+    /**
+     * Finalizes table creation with post-processing
+     */
+    finalizeTableCreation() {
+        // Mark table as rendered
         this.tableRendered = true;
         
-        // If there are pending selected cells to restore, do it now
+        // Restore selected cells if needed
         if (this.pendingSelectedCells) {
             this.restoreSelectedCells(this.pendingSelectedCells);
             this.pendingSelectedCells = null;
-        } else {
-            // Выделяем максимальные значения в каждом столбце
-            //this.highlightMaxValues();
         }
 
-        // After creating the table, add highlight classes to average cells
+        // Highlight average cells
         this.highlightAverageCells();
+        
+        // Make table scrollable
+        this.makeTableScrollable();
     }
-    
-    calculateMeanOfSelectedCells() {
-        for (let i = 1; i < this.table.rows.length - 1; i++) { // Skip the last row (overall average)
-            let sum = 0;
-            let count = 0;
+
+    // Add a method to make the table horizontally scrollable
+    makeTableScrollable() {
+        // Find table container or create a wrapper
+        let tableContainer = this.table.parentElement;
+        if (!tableContainer || !tableContainer.classList.contains('table-container')) {
+            // Create a container
+            tableContainer = document.createElement('div');
+            tableContainer.className = 'table-container';
+            tableContainer.style.overflowX = 'auto';
+            tableContainer.style.width = '100%';
+            tableContainer.style.maxWidth = '100%';
             
-            for (let j = 1; j < this.table.rows[i].cells.length - 1; j++) {
+            // Insert wrapper before table
+            this.table.parentNode.insertBefore(tableContainer, this.table);
+            
+            // Move table into the wrapper
+            tableContainer.appendChild(this.table);
+        }
+    }
+
+    // Update calculateMeanOfSelectedCells method to calculate by category for each row
+    calculateMeanOfSelectedCells() {
+        if (!this.table || !this.currentData) return;
+        
+        const currentImage = window.app.canvasView.getCurrentImage();
+        if (!currentImage) return;
+        
+        // Get all categories
+        const categories = currentImage.selectionCategories;
+        
+        // Create a map to store sums and counts for each category (overall)
+        const categoryStats = {};
+        // Also track per-row stats for each category
+        const rowCategoryStats = {};
+        
+        categories.forEach(cat => {
+            categoryStats[cat.id] = { sum: 0, count: 0, cells: [] };
+        });
+        
+        // Calculate means for each row
+        for (let i = 1; i < this.table.rows.length; i++) {
+            // Initialize row-specific category stats
+            rowCategoryStats[i] = {};
+            categories.forEach(cat => {
+                rowCategoryStats[i][cat.id] = { sum: 0, count: 0 };
+            });
+            
+            for (let j = 1; j < this.table.rows[i].cells.length - categories.length; j++) {
                 const cell = this.table.rows[i].cells[j];
                 
                 if (cell.classList.contains('selected')) {
-                    sum += parseFloat(cell.textContent);
-                    count += 1;
+                    const value = parseFloat(cell.textContent);
+                    
+                    // Track by category
+                    const cellCategories = cell.getAttribute('data-categories');
+                    if (cellCategories) {
+                        cellCategories.split(',').forEach(catId => {
+                            if (categoryStats[catId]) {
+                                // Update overall stats for this category
+                                categoryStats[catId].sum += value;
+                                categoryStats[catId].count += 1;
+                                categoryStats[catId].cells.push({ row: i, col: j, value });
+                                
+                                // Update row-specific stats for this category
+                                rowCategoryStats[i][catId].sum += value;
+                                rowCategoryStats[i][catId].count += 1;
+                            }
+                        });
+                    }
                 }
             }
             
-            // Avoid division by zero
-            const mean = count > 0 ? (sum / count).toFixed(3) : "NaN";
-            this.table.rows[i].cells[this.currentData.luminance[0].length + 1].textContent = mean;
+            // Calculate and update category means for this row
+            for (let c = 0; c < categories.length; c++) {
+                const catId = categories[c].id;
+                const catStats = rowCategoryStats[i][catId];
+                
+                const catMean = catStats.count > 0 ? 
+                    (catStats.sum / catStats.count).toFixed(3) : "NaN";
+                
+                // Category means are at the end of the row
+                const catMeanCellIndex = this.currentData.luminance[0].length + 1 + c;
+                this.table.rows[i].cells[catMeanCellIndex].textContent = catMean;
+                
+                // Apply the category color with transparency
+                this.table.rows[i].cells[catMeanCellIndex].style.backgroundColor = 
+                    this.hexToRgba(categories[c].color, 0.2);
+            }
         }
         
-        // Update the overall average in the last row
-        this.updateOverallAverageRow();
+        // Update category statistics using the new manager
+        this.categoryStatsManager.updateCategoryAverages(categoryStats, categories, this.table.parentNode);
         
-        // Выделяем максимальные значения в каждом столбце
-        //this.highlightMaxValues();
-
+        
+        // Update the overall average row (category averages by column)
+        this.updateCategoryAverageRow(categories);
+        
         // Add highlight after updating values
         this.highlightAverageCells();
+    }
+
+    // Add new method to update category averages
+    updateCategoryAverages(categoryStats, categories) {
+        // Find or create category averages container
+        let categoryAveragesContainer = document.getElementById('category-averages');
+        if (!categoryAveragesContainer) {
+            categoryAveragesContainer = document.createElement('div');
+            categoryAveragesContainer.id = 'category-averages';
+            categoryAveragesContainer.className = 'category-averages';
+            
+            // Insert before table
+            this.table.parentNode.insertBefore(categoryAveragesContainer, this.table);
+        } else {
+            // Clear existing content
+            categoryAveragesContainer.innerHTML = '';
+        }
+        
+        // Create header
+        const header = document.createElement('h3');
+        header.textContent = 'Среднее по категориям';
+        categoryAveragesContainer.appendChild(header);
+        
+        // Create table for category averages
+        const catTable = document.createElement('table');
+        catTable.className = 'category-averages-table';
+        
+        // Create header row
+        const headerRow = document.createElement('tr');
+        
+        const catHeader = document.createElement('th');
+        catHeader.textContent = 'Категория';
+        headerRow.appendChild(catHeader);
+        
+        const colorHeader = document.createElement('th');
+        colorHeader.textContent = 'Цвет';
+        headerRow.appendChild(colorHeader);
+        
+        const countHeader = document.createElement('th');
+        countHeader.textContent = 'Кол-во ячеек';
+        headerRow.appendChild(countHeader);
+        
+        const avgHeader = document.createElement('th');
+        avgHeader.textContent = 'Среднее значение';
+        headerRow.appendChild(avgHeader);
+        
+        catTable.appendChild(headerRow);
+        
+        // Add rows for each category
+        categories.forEach(category => {
+            const row = document.createElement('tr');
+            
+            const nameCell = document.createElement('td');
+            nameCell.textContent = category.name;
+            row.appendChild(nameCell);
+            
+            const colorCell = document.createElement('td');
+            const colorSwatch = document.createElement('div');
+            colorSwatch.className = 'color-swatch';
+            colorSwatch.style.backgroundColor = category.color;
+            colorSwatch.style.width = '20px';
+            colorSwatch.style.height = '20px';
+            colorSwatch.style.margin = '0 auto';
+            colorSwatch.style.border = '1px solid #ccc';
+            colorCell.appendChild(colorSwatch);
+            row.appendChild(colorCell);
+            
+            const countCell = document.createElement('td');
+            countCell.textContent = categoryStats[category.id]?.count || 0;
+            row.appendChild(countCell);
+            
+            const avgCell = document.createElement('td');
+            const stats = categoryStats[category.id];
+            if (stats && stats.count > 0) {
+                avgCell.textContent = (stats.sum / stats.count).toFixed(3);
+            } else {
+                avgCell.textContent = 'N/A';
+            }
+            row.appendChild(avgCell);
+            
+            catTable.appendChild(row);
+        });
+        
+        categoryAveragesContainer.appendChild(catTable);
     }
     
     getSelectedCells() {
@@ -181,6 +497,8 @@ class TableView {
                 cell.className = '';
                 // Remove any custom styles
                 cell.style.backgroundColor = '';
+                // Remove data attributes
+                cell.removeAttribute('data-categories');
             }
         }
         
@@ -204,25 +522,31 @@ class TableView {
                 if (cell.categoryId) {
                     // Get the category color
                     const category = currentImage.getCategoryById(cell.categoryId);
-                    // Apply the category color
-                    tableCell.style.backgroundColor = category.color;
+                    
                     // Add data attribute to track the categories
                     const cellCategories = tableCell.getAttribute('data-categories') || '';
                     if (!cellCategories.includes(cell.categoryId)) {
-                        tableCell.setAttribute('data-categories', 
-                            cellCategories ? `${cellCategories},${cell.categoryId}` : cell.categoryId);
+                        const newCategories = cellCategories ? 
+                            `${cellCategories},${cell.categoryId}` : cell.categoryId;
+                        tableCell.setAttribute('data-categories', newCategories);
+                        
+                        // Apply multi-category style
+                        this.applyMultiCategoryStyle(tableCell, newCategories.split(','), currentImage);
                     }
+                    
                     // Still add selected class for existing code compatibility
                     tableCell.classList.add('selected');
                 } else {
                     // Legacy format - add default selected class
                     tableCell.classList.add('selected');
+                    tableCell.style.backgroundColor = currentImage.getCategoryById('default').color;
                 }
             }
         });
         
         // Update means
         this.calculateMeanOfSelectedCells();
+        //this.updateCategoryAverages();
     }
     
     // Add this method to the TableView class
@@ -247,8 +571,8 @@ class TableView {
         return count > 0 ? (sum / count).toFixed(3) : "NaN";
     }
 
-    // Add this method to update or create the overall average row
-    updateOverallAverageRow() {
+    // Update the overall average row to include category averages
+    updateOverallAverageRow(categories = []) {
         const overallAverage = this.calculateOverallAverage();
         
         // Check if the bottom row already exists
@@ -263,98 +587,68 @@ class TableView {
             // Create label cell
             const labelCell = bottomRow.insertCell(0);
             labelCell.textContent = "Общее среднее";
-            labelCell.style.fontWeight = "bold";
+            labelCell.className = 'overall-average-label';
             
             // Add empty cells for data columns
-            const colCount = this.currentData?.luminance[0]?.length || 0;
-            for (let j = 0; j < colCount; j++) {
+            const dataColCount = this.currentData?.luminance[0]?.length || 0;
+            for (let j = 0; j < dataColCount; j++) {
                 bottomRow.insertCell(j + 1).textContent = "";
             }
             
+            // Add cells for category averages
+            for (let c = 0; c < categories.length; c++) {
+                bottomRow.insertCell(dataColCount + 1 + c);
+            }
+            
             // Add cell for overall average
-            bottomRow.insertCell(colCount + 1);
+            //bottomRow.insertCell(dataColCount + 1 + categories.length);
         }
         
-        // Set the overall average value
-        bottomRow.cells[bottomRow.cells.length - 1].textContent = overallAverage;
-        bottomRow.cells[bottomRow.cells.length - 1].style.fontWeight = "bold";
-
+        // Calculate category column averages
+        if (categories.length > 0) {
+            // For each category column, calculate the average
+            for (let c = 0; c < categories.length; c++) {
+                let catSum = 0;
+                let catCount = 0;
+                
+                // Start from row 1 (skip header) and skip the bottom row
+                for (let i = 1; i < this.table.rows.length - 1; i++) {
+                    const catCell = this.table.rows[i].cells[this.currentData.luminance[0].length + 1 + c];
+                    const catValue = catCell.textContent;
+                    
+                    if (catValue !== "NaN") {
+                        catSum += parseFloat(catValue);
+                        catCount++;
+                    }
+                }
+                
+                // Calculate category average
+                const catAvg = catCount > 0 ? (catSum / catCount).toFixed(3) : "NaN";
+                
+                // Update the cell in the bottom row
+                const catAvgCell = bottomRow.cells[this.currentData.luminance[0].length + 1 + c];
+                catAvgCell.textContent = catAvg;
+                catAvgCell.style.backgroundColor = this.hexToRgba(categories[c].color, 0.3);
+                catAvgCell.className = 'category-average-value';
+            }
+        }
+        
+        // Set the overall average value (last cell)
+        //bottomRow.cells[bottomRow.cells.length - 1].textContent = overallAverage;
+        //bottomRow.cells[bottomRow.cells.length - 1].className = 'overall-average-value';
+        
+        
         // Add highlight after updating
         this.highlightAverageCells();
     }
 
-    // Add this method to TableView class
+    // Replace the existing exportToExcel method with this simplified version
     exportToExcel() {
-        // Check if table has data
-        if (!this.currentData || !this.table.rows.length) {
-            alert("Нет данных для экспорта");
-            return;
-        }
-        
-        // Gather table data including headers and formatting
-        const tableData = [];
-        
-        // Add all rows from table to dataset
-        for (let i = 0; i < this.table.rows.length; i++) {
-            const rowData = [];
-            const row = this.table.rows[i];
-            
-            for (let j = 0; j < row.cells.length; j++) {
-                // For numeric cells, try to convert to numbers
-                const cellContent = row.cells[j].textContent;
-                if (i > 0 && j > 0 && cellContent !== "NaN" && !isNaN(parseFloat(cellContent))) {
-                    rowData.push(parseFloat(cellContent));
-                } else {
-                    rowData.push(cellContent);
-                }
-            }
-            
-            tableData.push(rowData);
-        }
-        
-        // Get currently selected cells
-        const selectedCells = this.getSelectedCells();
-        
-        // Send to the server for Excel generation
-        fetch('/export-excel', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                tableData: tableData,
-                selectedCells: selectedCells
-            })
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Server error: ' + response.status);
-            }
-            // Handle the file download
-            return response.blob();
-        })
-        .then(blob => {
-            // Create a temporary URL to the blob
-            const url = window.URL.createObjectURL(blob);
-            
-            // Create a link element to trigger the download
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = "luminance_data_" + new Date().toISOString().split('T')[0] + ".xlsx";
-            
-            // Add to the DOM and trigger click
-            document.body.appendChild(a);
-            a.click();
-            
-            // Clean up
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        })
-        .catch(error => {
-            console.error('Error exporting to Excel:', error);
-            alert('Ошибка при экспорте в Excel: ' + error.message);
-        });
+        this.excelExporter.exportTableData(this)
+            .catch(error => {
+                console.error('Error exporting to Excel:', error);
+                alert('Ошибка при экспорте в Excel: ' + error.message);
+            });
     }
 
     // Добавьте этот метод в класс TableView
@@ -464,42 +758,407 @@ class TableView {
             // If all categories removed, remove selected class
             if (!updatedCategories) {
                 cell.classList.remove('selected');
-                cell.style.backgroundColor = '';
+                cell.style.background = '';
             } else {
-                // Otherwise, use the color of the last remaining category
-                const lastCategory = currentImage.getCategoryById(
-                    categoryArray[categoryArray.length - 1]
-                );
-                cell.style.backgroundColor = lastCategory.color;
+                // Update the multi-color style with remaining categories
+                this.applyMultiCategoryStyle(cell, updatedCategories.split(','), currentImage);
             }
         } else {
             // Add this category
             categoryArray.push(categoryId);
             cell.setAttribute('data-categories', categoryArray.join(','));
             cell.classList.add('selected');
-            cell.style.backgroundColor = category.color;
+            
+            // Apply multi-category style if there are multiple categories
+            this.applyMultiCategoryStyle(cell, categoryArray, currentImage);
         }
         
         this.calculateMeanOfSelectedCells();
     }
 
-    highlightAverageCells() {
-        if (!this.table || this.table.rows.length === 0) return;
+    /**
+     * Applies a visual style to represent multiple categories in a single cell
+     * @param {HTMLTableCellElement} cell - The table cell element
+     * @param {Array} categoryIds - Array of category IDs
+     * @param {ImageProcessor} image - The current image with category data
+     */
+    applyMultiCategoryStyle(cell, categoryIds, image) {
+        if (!categoryIds || categoryIds.length === 0) {
+            cell.style.background = '';
+            return;
+        }
         
-        // Highlight all cells in the last column (Среднее по среднему)
+        // If only one category, use solid background
+        if (categoryIds.length === 1) {
+            const category = image.getCategoryById(categoryIds[0]);
+            cell.style.background = category.color;
+            return;
+        }
+        
+        // Get colors for all categories
+        const colors = categoryIds.map(id => image.getCategoryById(id).color);
+        
+        if (categoryIds.length === 2) {
+            // For two categories, use diagonal gradient
+            cell.style.background = `linear-gradient(45deg, ${colors[0]} 0%, ${colors[0]} 49%, ${colors[1]} 51%, ${colors[1]} 100%)`;
+        } else if (categoryIds.length === 3) {
+            // For three categories, use three vertical stripes
+            cell.style.background = `linear-gradient(to right, ${colors[0]} 0%, ${colors[0]} 33%, ${colors[1]} 33%, ${colors[1]} 66%, ${colors[2]} 66%, ${colors[2]} 100%)`;
+        } else {
+            // For more than three, create a striped pattern
+            // Calculate stripe width based on number of categories
+            const stripeWidth = 100 / categoryIds.length;
+            let gradientStr = 'linear-gradient(to right';
+            
+            colors.forEach((color, index) => {
+                const start = index * stripeWidth;
+                const end = (index + 1) * stripeWidth;
+                gradientStr += `, ${color} ${start}%, ${color} ${end}%`;
+            });
+            
+            gradientStr += ')';
+            cell.style.background = gradientStr;
+        }
+    }
+
+    highlightAverageCells() {
+        if (!this.table || this.table.rows.length === 0 || !this.currentData || !this.currentData.luminance) return;
+        
+        const currentImage = window.app.canvasView.getCurrentImage();
+        if (!currentImage) return;
+        
+        const categories = currentImage.selectionCategories || [];
+        
+        // Highlight all cells in the average columns
         for (let i = 1; i < this.table.rows.length; i++) {
             const row = this.table.rows[i];
-            const lastCell = row.cells[row.cells.length - 1];
-            lastCell.classList.add('average-value');
-        }
-        
-        // Highlight the overall average (Общее среднее) 
-        if (this.table.rows.length > 0) {
-            const lastRow = this.table.rows[this.table.rows.length - 1];
-            if (lastRow.classList.contains('overall-average')) {
-                lastRow.cells[0].classList.add('overall-average-label');
-                lastRow.cells[lastRow.cells.length - 1].classList.add('overall-average-value');
+            
+            // Skip if this is not a data row or if row is undefined
+            if (!row || !row.cells || row.cells.length <= this.currentData.luminance[0].length + 1) continue;
+            
+            // Add highlight classes to category average cells
+            for (let c = 0; c < categories.length; c++) {
+                const cellIndex = this.currentData.luminance[0].length + 1 + c;
+                
+                // Check if the cell exists at this index
+                if (cellIndex < row.cells.length) {
+                    const catCell = row.cells[cellIndex];
+                    if (catCell) {
+                        catCell.classList.add('category-average');
+                    }
+                }
+            }
+            
+            // Highlight the overall average cell if it exists
+            if (row.cells.length > 0) {
+                const lastCell = row.cells[row.cells.length - 1];
+                if (lastCell) {
+                    lastCell.classList.add('average-value');
+                }
             }
         }
+        
+        // Highlight the overall average row
+        if (this.table.rows.length > 0) {
+            const lastRow = this.table.rows[this.table.rows.length - 1];
+            if (lastRow && lastRow.classList && lastRow.classList.contains('overall-average')) {
+                if (lastRow.cells && lastRow.cells[0]) {
+                    lastRow.cells[0].classList.add('overall-average-label');
+                }
+                
+                if (lastRow.cells && lastRow.cells.length > 0) {
+                    const lastCellIndex = lastRow.cells.length - 1;
+                    if (lastRow.cells[lastCellIndex]) {
+                        lastRow.cells[lastCellIndex].classList.add('overall-average-value');
+                    }
+                }
+                
+                // Highlight category average cells in the overall row
+                if (this.currentData && this.currentData.luminance && this.currentData.luminance[0]) {
+                    const dataColCount = this.currentData.luminance[0].length || 0;
+                    
+                    for (let c = 0; c < categories.length; c++) {
+                        const catCellIndex = dataColCount + 1 + c;
+                        if (lastRow.cells && catCellIndex < lastRow.cells.length) {
+                            const catCell = lastRow.cells[catCellIndex];
+                            if (catCell) {
+                                catCell.classList.add('category-average-value');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Helper method to convert hex to RGBA
+    hexToRgba(hex, alpha = 1) {
+        // Remove # if present
+        hex = hex.replace('#', '');
+        
+        // Parse hex values
+        let r = parseInt(hex.substring(0, 2), 16);
+        let g = parseInt(hex.substring(2, 4), 16);
+        let b = parseInt(hex.substring(4, 6), 16);
+        
+        // Return rgba
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    // Enhanced version of updateCategoryAverages to show more detailed statistics
+    updateCategoryAverages(categoryStats, categories) {
+        // Find or create category averages container
+        let categoryAveragesContainer = document.getElementById('category-averages');
+        if (!categoryAveragesContainer) {
+            categoryAveragesContainer = document.createElement('div');
+            categoryAveragesContainer.id = 'category-averages';
+            categoryAveragesContainer.className = 'category-averages';
+            
+            // Insert before table
+            this.table.parentNode.insertBefore(categoryAveragesContainer, this.table.nextSibling);
+        } else {
+            // Clear existing content
+            categoryAveragesContainer.innerHTML = '';
+        }
+        
+        // Create header
+        const header = document.createElement('h3');
+        header.textContent = 'Статистика по категориям';
+        categoryAveragesContainer.appendChild(header);
+        
+        // Create table for category averages
+        const catTable = document.createElement('table');
+        catTable.className = 'category-averages-table';
+        
+        // Create header row
+        const headerRow = document.createElement('tr');
+        
+        const catHeader = document.createElement('th');
+        catHeader.textContent = 'Категория';
+        headerRow.appendChild(catHeader);
+        
+        const colorHeader = document.createElement('th');
+        colorHeader.textContent = 'Цвет';
+        headerRow.appendChild(colorHeader);
+        
+        const countHeader = document.createElement('th');
+        countHeader.textContent = 'Кол-во ячеек';
+        headerRow.appendChild(countHeader);
+        
+        const avgHeader = document.createElement('th');
+        avgHeader.textContent = 'Среднее значение';
+        headerRow.appendChild(avgHeader);
+        
+        // Add header for row averages
+        const rowAvgHeader = document.createElement('th');
+
+        
+        catTable.appendChild(headerRow);
+        
+        // For calculating overall category averages
+        let totalRowAvg = 0;
+        let totalRowAvgCount = 0;
+        
+        // Add rows for each category
+        categories.forEach(category => {
+            const row = document.createElement('tr');
+            
+            const nameCell = document.createElement('td');
+            nameCell.textContent = category.name;
+            row.appendChild(nameCell);
+            
+            const colorCell = document.createElement('td');
+            const colorSwatch = document.createElement('div');
+            colorSwatch.className = 'color-swatch';
+            colorSwatch.style.backgroundColor = category.color;
+            colorSwatch.style.width = '20px';
+            colorSwatch.style.height = '20px';
+            colorSwatch.style.margin = '0 auto';
+            colorSwatch.style.border = '1px solid #ccc';
+            colorCell.appendChild(colorSwatch);
+            row.appendChild(colorCell);
+            
+            const countCell = document.createElement('td');
+            const categoryCount = categoryStats[category.id]?.count || 0;
+            countCell.textContent = categoryCount;
+            row.appendChild(countCell);
+            
+            const avgCell = document.createElement('td');
+            const stats = categoryStats[category.id];
+            let avgValue = 'N/A';
+            if (stats && stats.count > 0) {
+                avgValue = (stats.sum / stats.count).toFixed(3);
+                avgCell.textContent = avgValue;
+            } else {
+                avgCell.textContent = avgValue;
+            }
+            row.appendChild(avgCell);
+            
+            catTable.appendChild(row);
+        });
+        categoryAveragesContainer.appendChild(catTable);
+    }
+
+    // Обновленный метод для выделения ячеек средних значений
+    highlightAverageCells() {
+        if (!this.table || this.table.rows.length === 0 || !this.currentData || !this.currentData.luminance) return;
+        
+        const currentImage = window.app.canvasView.getCurrentImage();
+        if (!currentImage) return;
+        
+        const categories = currentImage.selectionCategories || [];
+        
+        // Highlight all cells in the average columns
+        for (let i = 1; i < this.table.rows.length; i++) {
+            const row = this.table.rows[i];
+            
+            // Skip if this is not a data row or if row is undefined
+            if (!row || !row.cells || row.cells.length <= this.currentData.luminance[0].length + 1) continue;
+            
+            // Add highlight classes to category average cells
+            for (let c = 0; c < categories.length; c++) {
+                const cellIndex = this.currentData.luminance[0].length + 1 + c;
+                
+                // Check if the cell exists at this index
+                if (cellIndex < row.cells.length) {
+                    const catCell = row.cells[cellIndex];
+                    if (catCell) {
+                        catCell.classList.add('category-average');
+                    }
+                }
+            }
+            
+            // Highlight the overall average cell if it exists
+            if (row.cells.length > 0) {
+                const lastCell = row.cells[row.cells.length - 1];
+                if (lastCell) {
+                    lastCell.classList.add('average-value');
+                }
+            }
+        }
+        
+        // Highlight the overall average row
+        if (this.table.rows.length > 0) {
+            const lastRow = this.table.rows[this.table.rows.length - 1];
+            if (lastRow && lastRow.classList && lastRow.classList.contains('overall-average')) {
+                if (lastRow.cells && lastRow.cells[0]) {
+                    lastRow.cells[0].classList.add('overall-average-label');
+                }
+                
+                if (lastRow.cells && lastRow.cells.length > 0) {
+                    const lastCellIndex = lastRow.cells.length - 1;
+                    if (lastRow.cells[lastCellIndex]) {
+                        lastRow.cells[lastCellIndex].classList.add('overall-average-value');
+                    }
+                }
+                
+                // Highlight category average cells in the overall row
+                if (this.currentData && this.currentData.luminance && this.currentData.luminance[0]) {
+                    const dataColCount = this.currentData.luminance[0].length || 0;
+                    
+                    for (let c = 0; c < categories.length; c++) {
+                        const catCellIndex = dataColCount + 1 + c;
+                        if (lastRow.cells && catCellIndex < lastRow.cells.length) {
+                            const catCell = lastRow.cells[catCellIndex];
+                            if (catCell) {
+                                catCell.classList.add('category-average-value');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Updates the category average row at the bottom of the table
+     * @param {Array} categories - Array of category objects
+     */
+    updateCategoryAverageRow(categories = []) {
+        // Check if we have data to work with
+        if (!this.table || !this.currentData || !this.currentData.luminance || 
+            !this.currentData.luminance[0]) return;
+        
+        const dataColCount = this.currentData.luminance[0].length || 0;
+        
+        // Check if the bottom row already exists
+        let bottomRow;
+        if (this.table.rows.length > 0 && this.table.rows[this.table.rows.length - 1].classList.contains('overall-average')) {
+            bottomRow = this.table.rows[this.table.rows.length - 1];
+        } else {
+            // Create new row if it doesn't exist
+            bottomRow = this.table.insertRow();
+            bottomRow.classList.add('overall-average');
+            
+            // Create label cell
+            const labelCell = bottomRow.insertCell(0);
+            labelCell.textContent = "Среднее по столбцам";
+            labelCell.className = 'overall-average-label';
+            
+            // Add empty cells for data columns
+            for (let j = 0; j < dataColCount; j++) {
+                bottomRow.insertCell(j + 1).textContent = "";
+            }
+            
+            // Add cells for category averages
+            for (let c = 0; c < categories.length; c++) {
+                bottomRow.insertCell(dataColCount + 1 + c);
+            }
+        }
+        
+        // Calculate column averages for each category
+        for (let c = 0; c < categories.length; c++) {
+            // Create total trackers for this category
+            let colTotals = new Array(dataColCount).fill(0);
+            let colCounts = new Array(dataColCount).fill(0);
+            
+            // Iterate through data rows (skip header and bottom row)
+            for (let i = 1; i < this.table.rows.length - 1; i++) {
+                // For each data column
+                for (let j = 1; j <= dataColCount; j++) {
+                    const cell = this.table.rows[i].cells[j];
+                    if (!cell) continue;
+                    
+                    // Check if this cell belongs to the current category
+                    const cellCategories = cell.getAttribute('data-categories');
+                    if (cell.classList.contains('selected') && 
+                        ((!cellCategories && c === 0) || // Legacy format - first category
+                         (cellCategories && cellCategories.includes(categories[c].id)))) {
+                        
+                        const value = parseFloat(cell.textContent);
+                        if (!isNaN(value)) {
+                            colTotals[j - 1] += value;
+                            colCounts[j - 1]++;
+                        }
+                    }
+                }
+            }
+            
+            // Calculate and display column averages in category average cell
+            let catColTotal = 0;
+            let catColCount = 0;
+            
+            for (let j = 0; j < dataColCount; j++) {
+                if (colCounts[j] > 0) {
+                    const colAvg = colTotals[j] / colCounts[j];
+                    // Add to category total
+                    catColTotal += colAvg;
+                    catColCount++;
+                    
+                }
+            }
+            
+            // Calculate and display the category column average
+            const catColAvg = catColCount > 0 ? (catColTotal / catColCount).toFixed(3) : "NaN";
+            const catAvgCell = bottomRow.cells[dataColCount + 1 + c];
+            if (catAvgCell) {
+                catAvgCell.textContent = catColAvg;
+                catAvgCell.style.backgroundColor = this.hexToRgba(categories[c].color, 0.3);
+                catAvgCell.className = 'category-average-value';
+            }
+        }
+        
+        // Apply highlighting and styling
+        this.highlightAverageCells();
     }
 }
