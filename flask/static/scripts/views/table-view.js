@@ -411,11 +411,8 @@ class TableView {
         for (let i = 1; i < this.table.rows.length; i++) {
             for (let j = 1; j < this.table.rows[i].cells.length - 1; j++) {
                 const cell = this.table.rows[i].cells[j];
-                // Remove all selection classes
                 cell.className = '';
-                // Remove any custom styles
                 cell.style.backgroundColor = '';
-                // Remove data attributes
                 cell.removeAttribute('data-categories');
             }
         }
@@ -424,43 +421,45 @@ class TableView {
         const currentImage = window.app.canvasView.getCurrentImage();
         if (!currentImage) return;
         
-        // Filter valid cells with improved boundary checking
-        const validCells = selectedCells.filter(cell => {
-            // Check if cell indices are within current table dimensions
-            return cell.row >= 0 && cell.row < rowCount && 
-                   cell.col >= 0 && cell.col < colCount;
+        // Group cells by position first (to handle multi-category cells properly)
+        const cellsByPosition = {};
+        
+        // Filter and group valid cells by position
+        selectedCells.filter(cell => 
+            cell.row >= 0 && cell.row < rowCount && 
+            cell.col >= 0 && cell.col < colCount
+        ).forEach(cell => {
+            const key = `${cell.row},${cell.col}`;
+            if (!cellsByPosition[key]) {
+                cellsByPosition[key] = [];
+            }
+            cellsByPosition[key].push(cell);
         });
         
-        // Apply selection styles to valid cells
-        validCells.forEach(cell => {
-            if (this.table.rows[cell.row + 1] && 
-                this.table.rows[cell.row + 1].cells[cell.col + 1]) {
-                const tableCell = this.table.rows[cell.row + 1].cells[cell.col + 1];
-                // Handle backward compatibility
-                if (cell.categoryId) {
-                    // Get the category color
-                    const category = currentImage.getCategoryById(cell.categoryId);
-                    
-                    // Add data attribute to track the categories
-                    const cellCategories = tableCell.getAttribute('data-categories') || '';
-                    if (!cellCategories.includes(cell.categoryId)) {
-                        const newCategories = cellCategories ? 
-                            `${cellCategories},${cell.categoryId}` : cell.categoryId;
-                        tableCell.setAttribute('data-categories', newCategories);
-                        
-                        // Apply multi-category style
-                        this.applyMultiCategoryStyle(tableCell, newCategories.split(','), currentImage);
+        // Process each unique cell position with all its categories
+        for (const posKey in cellsByPosition) {
+            const [row, col] = posKey.split(',').map(Number);
+            
+            if (this.table.rows[row + 1] && this.table.rows[row + 1].cells[col + 1]) {
+                const tableCell = this.table.rows[row + 1].cells[col + 1];
+                const categoryIds = [];
+                
+                // Collect all unique category IDs for this cell
+                cellsByPosition[posKey].forEach(cell => {
+                    const categoryId = cell.categoryId || 'default';
+                    if (!categoryIds.includes(categoryId)) {
+                        categoryIds.push(categoryId);
                     }
-                    
-                    // Still add selected class for existing code compatibility
-                    tableCell.classList.add('selected');
-                } else {
-                    // Legacy format - add default selected class
-                    tableCell.classList.add('selected');
-                    tableCell.style.backgroundColor = currentImage.getCategoryById('default').color;
-                }
+                });
+                
+                // Set the data-categories attribute
+                tableCell.setAttribute('data-categories', categoryIds.join(','));
+                
+                // Add selected class and apply the multi-category style
+                tableCell.classList.add('selected');
+                this.applyMultiCategoryStyle(tableCell, categoryIds, currentImage);
             }
-        });
+        }
         
         // Update means
         this.calculateMeanOfSelectedCells();
@@ -914,5 +913,19 @@ class TableView {
             overallAverageRow.style.fontWeight = 'bold';
             overallAverageRow.style.borderTop = '2px solid #dee2e6';
         }
+    }
+
+    /**
+     * Synchronizes the current table selections with the ImageProcessor
+     */
+    syncSelectionsWithImageProcessor() {
+        const currentImage = window.app.canvasView.getCurrentImage();
+        if (!currentImage) return;
+        
+        // Get all currently selected cells from the table
+        const selectedCells = this.getSelectedCells();
+        
+        // Update the image processor with these selections
+        currentImage.updateSelectedCells(selectedCells);
     }
 }
